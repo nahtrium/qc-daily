@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QC Inspector — Astronauts</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #FDF8F2;
+  --bg2: #F5EFE6;
+  --surface: #FFFFFF;
+  --surface2: #FEF9F4;
+  --border: #E8DDD0;
+  --border2: #D4C5B2;
+  --text: #1A1208;
+  --text2: #6B5B47;
+  --text3: #A89580;
+  --orange: #FF6B35;
+  --orange-light: #FFF0EB;
+  --orange-border: #FFD4C2;
+  --orange-dark: #D94E1F;
+  --teal: #00B89C;
+  --teal-light: #E6F9F6;
+  --teal-border: #9FE5DA;
+  --yellow: #FFD166;
+  --yellow-light: #FFFBEE;
+  --red: #FF4757;
+  --red-light: #FFF0F1;
+  --red-border: #FFB3BA;
+  --green: #2ED573;
+  --green-light: #EDFFF4;
+  --green-border: #A3EFBF;
+  --font: 'Plus Jakarta Sans', sans-serif;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --radius-lg: 20px;
+  --radius-pill: 100px;
+  --shadow: 0 2px 12px rgba(26,18,8,0.08);
+  --shadow-md: 0 4px 24px rgba(26,18,8,0.12);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.6; min-height: 100vh; }
+
+/* ── DECORATIVE BG BLOBS ── */
+body::before {
+  content: '';
+  position: fixed; top: -120px; right: -80px;
+  width: 420px; height: 420px;
+  background: radial-gradient(circle, rgba(255,107,53,0.10) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed; bottom: -80px; left: -60px;
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(0,184,156,0.09) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+}
+
+/* ── NAV ── */
+.nav {
+  background: rgba(253,248,242,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1.5px solid var(--border);
+  padding: 0 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 58px; position: sticky; top: 0; z-index: 100;
+}
+.nav-brand {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 17px; font-weight: 800; color: var(--text); letter-spacing: -0.3px;
+}
+.nav-brand-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--orange); display: inline-block; }
+.nav-brand span { color: var(--orange); }
+.nav-tabs { display: flex; gap: 4px; background: var(--bg2); border: 1.5px solid var(--border); border-radius: var(--radius-pill); padding: 4px; }
+.nav-tab {
+  background: none; border: none; color: var(--text2);
+  padding: 6px 18px; border-radius: var(--radius-pill);
+  cursor: pointer; font-family: var(--font); font-size: 13px; font-weight: 600;
+  transition: all 0.2s;
+}
+.nav-tab:hover { color: var(--text); }
+.nav-tab.active { background: var(--surface); color: var(--orange); box-shadow: var(--shadow); }
+.nav-user {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg2); border: 1.5px solid var(--border);
+  padding: 5px 12px 5px 5px;
+  border-radius: var(--radius-pill); font-size: 13px; font-weight: 600; color: var(--text2);
+}
+.nav-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--orange); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800;
+}
+
+/* ── VIEWS ── */
+.view { display: none; }
+.view.active { display: block; }
+
+/* ── LOGIN ── */
+.login-wrap {
+  min-height: 100vh; display: flex; align-items: center;
+  justify-content: center; padding: 20px; position: relative; z-index: 1;
+}
+.login-card {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg); padding: 44px 40px;
+  width: 100%; max-width: 400px; box-shadow: var(--shadow-md);
+}
+.login-eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--orange-light); border: 1.5px solid var(--orange-border);
+  color: var(--orange-dark); padding: 4px 12px; border-radius: var(--radius-pill);
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 16px;
+}
+.login-eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--orange); }
+.login-title { font-size: 26px; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.5px; }
+.login-sub { font-size: 14px; color: var(--text2); margin-bottom: 32px; font-weight: 500; }
+.form-label-styled {
+  display: block; font-size: 12px; font-weight: 700; color: var(--text2);
+  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;
+}
+.styled-select {
+  width: 100%; background: var(--bg2); border: 1.5px solid var(--border);
+  border-radius: var(--radius); color: var(--text); padding: 13px 16px;
+  font-family: var(--font); font-size: 15px; font-weight: 500;
+  appearance: none; cursor: pointer; transition: border-color 0.2s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23A89580' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center;
+  padding-right: 40px;
+}
+.styled-select:focus { outline: none; border-color: var(--orange); background-color: var(--surface); }
+.login-btn {
+  width: 100%; margin-top: 20px;
+  background: var(--orange); border: none; color: white;
+  padding: 15px; border-radius: var(--radius);
+  font-family: var(--font); font-size: 15px; font-weight: 700;
+  cursor: pointer; letter-spacing: -0.2px;
+  transition: background 0.2s, transform 0.15s;
+}
+.login-btn:hover { background: var(--orange-dark); transform: translateY(-1px); }
+.login-btn:active { transform: translateY(0); }
+
+/* ── FORM WRAPPER ── */
+.form-wrap { max-width: 540px; margin: 0 auto; padding: 24px 16px 100px; position: relative; z-index: 1; }
+
+/* ── SECTION CARD ── */
+.section-card {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg); margin-bottom: 14px; overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.section-hd {
+  padding: 13px 20px; background: var(--bg2); border-bottom: 1.5px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.section-num {
+  width: 24px; height: 24px; border-radius: var(--radius-sm);
+  background: var(--orange); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; flex-shrink: 0;
+}
+.section-title { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: -0.1px; }
+
+/* ── FORM ROWS ── */
+.form-row { padding: 14px 20px; border-bottom: 1.5px solid var(--border); }
+.form-row:last-child { border-bottom: none; }
+.field-label {
+  font-size: 12px; font-weight: 700; color: var(--text2);
+  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 7px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px;
+}
+.spec-tag {
+  font-size: 11px; font-weight: 600; color: var(--teal);
+  background: var(--teal-light); border: 1px solid var(--teal-border);
+  padding: 2px 9px; border-radius: var(--radius-pill);
+  text-transform: none; letter-spacing: 0;
+}
+.form-input {
+  width: 100%; background: var(--bg2); border: 1.5px solid var(--border);
+  border-radius: var(--radius); color: var(--text); padding: 12px 14px;
+  font-family: var(--font); font-size: 15px; font-weight: 500;
+  transition: border-color 0.2s, background 0.2s; -webkit-appearance: none;
+}
+.form-input:focus { outline: none; border-color: var(--orange); background: var(--surface); }
+.form-input.is-pass { border-color: var(--green); background: var(--green-light); }
+.form-input.is-fail { border-color: var(--red); background: var(--red-light); }
+.form-input::placeholder { color: var(--text3); }
+
+/* ── FIELD STATUS ── */
+.field-status {
+  margin-top: 6px; font-size: 12px; font-weight: 600;
+  display: flex; align-items: center; gap: 6px; min-height: 18px;
+}
+.field-status .pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: var(--radius-pill);
+  font-size: 11px; font-weight: 700;
+}
+.field-status .pill.pass { background: var(--green-light); color: #1a7a3a; border: 1px solid var(--green-border); }
+.field-status .pill.fail { background: var(--red-light); color: #c0182a; border: 1px solid var(--red-border); }
+.field-status .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* ── SENSORY GRID ── */
+.sensory-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px 20px; }
+.sensory-item label { display: block; font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+
+/* ── AUTO FIELDS ── */
+.auto-row { display: grid; grid-template-columns: 1fr 1fr; }
+.auto-row .form-row { border-right: 1.5px solid var(--border); }
+.auto-row .form-row:last-child { border-right: none; }
+.auto-val {
+  background: var(--bg2); border: 1.5px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px;
+  font-size: 15px; font-weight: 600; color: var(--text2);
+}
+
+/* ── OVERALL BANNER ── */
+.overall-banner {
+  display: none; margin: 4px 0 14px;
+  padding: 14px 18px; border-radius: var(--radius-lg);
+  border: 2px solid; align-items: center; gap: 12px;
+}
+.overall-banner.pass { background: var(--green-light); border-color: var(--green-border); color: #1a7a3a; }
+.overall-banner.fail { background: var(--red-light); border-color: var(--red-border); color: #c0182a; }
+.ob-icon { font-size: 22px; }
+.ob-text { font-size: 14px; font-weight: 700; }
+.ob-label {
+  margin-left: auto; padding: 4px 12px; border-radius: var(--radius-pill);
+  font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.overall-banner.pass .ob-label { background: #2ED573; color: white; }
+.overall-banner.fail .ob-label { background: var(--red); color: white; }
+
+/* ── PRODUCT BADGE ── */
+.product-badge {
+  margin-bottom: 14px; padding: 12px 18px;
+  background: var(--orange-light); border: 1.5px solid var(--orange-border);
+  border-radius: var(--radius-lg); display: flex; align-items: center; gap: 10px;
+  font-size: 13px; font-weight: 600; color: var(--orange-dark);
+}
+.product-badge-icon { font-size: 20px; }
+#productHint { font-weight: 700; }
+
+/* ── SUBMIT BAR ── */
+.submit-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(253,248,242,0.95); backdrop-filter: blur(12px);
+  border-top: 1.5px solid var(--border); padding: 12px 16px; z-index: 90;
+}
+.submit-btn {
+  width: 100%; max-width: 540px; display: block; margin: 0 auto;
+  background: var(--orange); border: none; color: white;
+  padding: 16px; border-radius: var(--radius);
+  font-family: var(--font); font-size: 15px; font-weight: 700;
+  cursor: pointer; letter-spacing: -0.2px;
+  transition: background 0.2s, transform 0.15s, opacity 0.15s;
+}
+.submit-btn:hover { background: var(--orange-dark); transform: translateY(-1px); }
+.submit-btn:active { transform: translateY(0); }
+.submit-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 86px; left: 50%; transform: translateX(-50%);
+  padding: 10px 20px; border-radius: var(--radius-pill);
+  font-size: 13px; font-weight: 600;
+  z-index: 200; opacity: 0; transition: opacity 0.3s;
+  pointer-events: none; white-space: nowrap; box-shadow: var(--shadow-md);
+}
+.toast.show { opacity: 1; }
+.toast.success { background: #2ED573; color: white; }
+.toast.error { background: var(--red); color: white; }
+.toast.info { background: var(--text); color: white; }
+
+/* ── DASHBOARD ── */
+.dash-wrap { padding: 24px 20px; max-width: 1240px; margin: 0 auto; position: relative; z-index: 1; }
+.dash-hd { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+.dash-title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+.dash-sub { font-size: 13px; color: var(--text2); font-weight: 500; margin-top: 2px; }
+.refresh-btn {
+  background: var(--surface); border: 1.5px solid var(--border);
+  color: var(--text2); padding: 8px 16px; border-radius: var(--radius-pill);
+  font-family: var(--font); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+}
+.refresh-btn:hover { border-color: var(--orange); color: var(--orange); }
+
+/* ── STATS ── */
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.stat-card {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg); padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+.stat-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+.stat-val { font-size: 28px; font-weight: 800; letter-spacing: -1px; color: var(--text); }
+.stat-val.clr-pass { color: #1a7a3a; }
+.stat-val.clr-fail { color: var(--red); }
+.stat-val.clr-orange { color: var(--orange); }
+
+/* ── FILTERS ── */
+.filters {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 16px;
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
+  box-shadow: var(--shadow);
+}
+.filter-group { display: flex; flex-direction: column; gap: 5px; min-width: 130px; flex: 1; }
+.filter-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; }
+.filter-input {
+  background: var(--bg2); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text); padding: 8px 12px;
+  font-family: var(--font); font-size: 13px; font-weight: 500;
+  transition: border-color 0.2s;
+}
+.filter-input:focus { outline: none; border-color: var(--orange); background: var(--surface); }
+.filter-actions { display: flex; gap: 8px; align-items: flex-end; }
+.filter-btn {
+  background: var(--bg2); border: 1.5px solid var(--border); color: var(--text2);
+  padding: 8px 16px; border-radius: var(--radius-sm);
+  cursor: pointer; font-family: var(--font); font-size: 13px; font-weight: 600;
+  transition: all 0.2s; white-space: nowrap;
+}
+.filter-btn:hover { border-color: var(--orange); color: var(--orange); }
+.filter-btn.primary { background: var(--orange); border-color: var(--orange); color: white; }
+.filter-btn.primary:hover { background: var(--orange-dark); }
+
+/* ── TABLE ── */
+.table-wrap {
+  overflow-x: auto; background: var(--surface);
+  border: 1.5px solid var(--border); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead tr { background: var(--bg2); }
+th {
+  padding: 12px 14px; font-size: 11px; font-weight: 700; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.07em; text-align: left;
+  white-space: nowrap; cursor: pointer; user-select: none;
+  border-bottom: 1.5px solid var(--border); transition: color 0.15s;
+}
+th:hover { color: var(--orange); }
+td { padding: 11px 14px; border-bottom: 1.5px solid var(--border); vertical-align: middle; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr { transition: background 0.15s; }
+tbody tr:hover { background: var(--bg2); }
+tbody tr.row-fail { background: #FFF5F5; }
+tbody tr.row-fail:hover { background: #FFE8E8; }
+
+/* ── BADGES ── */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: var(--radius-pill);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.badge-pass { background: var(--green-light); color: #1a7a3a; border: 1.5px solid var(--green-border); }
+.badge-fail { background: var(--red-light); color: #c0182a; border: 1.5px solid var(--red-border); }
+.badge-na { background: var(--bg2); color: var(--text3); border: 1.5px solid var(--border); }
+
+.empty-state { text-align: center; padding: 52px 20px; color: var(--text3); }
+.empty-icon { font-size: 40px; margin-bottom: 10px; }
+.empty-text { font-size: 14px; font-weight: 600; }
+
+/* ── HIDDEN FIELD (for product-based visibility) ── */
+.param-row { transition: opacity 0.2s; }
+.param-row.hidden { display: none; }
+
+@media (max-width: 600px) {
+  .nav-user .nav-user-name { display: none; }
+  .dash-wrap { padding: 16px 12px; }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .login-card { padding: 32px 24px; }
+  .sensory-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="loginView" class="view active">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-eyebrow">
+        <span class="login-eyebrow-dot"></span>
+        Quality Control System
+      </div>
+      <div class="login-title">Halo, siapa kamu? 👋</div>
+      <div class="login-sub">Pilih namamu untuk mulai sesi QC.</div>
+      <label class="form-label-styled" for="userSelect">Nama Operator</label>
+      <select class="styled-select" id="userSelect">
+        <option value="">— Pilih nama —</option>
+        <option>Rio</option>
+        <option>Salpa</option>
+        <option>Syahdan</option>
+        <option>Gerrie</option>
+        <option>Mady</option>
+        <option>Bianca</option>
+        <option>Gina</option>
+        <option>Lussy</option>
+      </select>
+      <button class="login-btn" onclick="login()">Mulai Sesi →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ NAV ═══ -->
+<nav class="nav" id="mainNav" style="display:none;">
+  <div class="nav-brand">
+    <span class="nav-brand-dot"></span>
+    QC<span>Astro</span>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" id="tabForm" onclick="switchTab('form')">✏️ Entry</button>
+    <button class="nav-tab" id="tabDash" onclick="switchTab('dash')">📊 Dashboard</button>
+  </div>
+  <div class="nav-user">
+    <div class="nav-avatar" id="navAvatar">A</div>
+    <span class="nav-user-name" id="navUser">—</span>
+  </div>
+</nav>
+
+<!-- ═══ FORM VIEW ═══ -->
+<div id="formView" class="view">
+  <div class="form-wrap">
+
+    <!-- product context hint -->
+    <div class="product-badge" id="productBadge" style="display:none;">
+      <span class="product-badge-icon">🧪</span>
+      <span>Spec aktif untuk: <span id="productHint">—</span></span>
+    </div>
+
+    <!-- 1. PRODUCT INFO -->
+    <div class="section-card">
+      <div class="section-hd">
+        <div class="section-num">1</div>
+        <div class="section-title">Informasi Produk</div>
+      </div>
+      <div class="form-row">
+        <div class="field-label">Nama Produk</div>
+        <select class="form-input" id="f_product" onchange="onProductChange()">
+          <option>Coconut Water</option>
+          <option>Espresso</option>
+          <option>Patria</option>
+          <option>Kintamani</option>
+          <option>Pink Nana</option>
+          <option>Tropical</option>
+          <option>Milky Way</option>
+          <option>Avocado Banana</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="field-label">Nomor Batch</div>
+        <input class="form-input" id="f_batch" type="text" placeholder="e.g. BT-2024-001">
+      </div>
+      <div class="auto-row">
+        <div class="form-row">
+          <div class="field-label">Tanggal</div>
+          <div class="auto-val" id="f_date">—</div>
+        </div>
+        <div class="form-row">
+          <div class="field-label">Waktu</div>
+          <div class="auto-val" id="f_time">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. MEASUREMENTS -->
+    <div class="section-card">
+      <div class="section-hd">
+        <div class="section-num">2</div>
+        <div class="section-title">Pengukuran</div>
+      </div>
+
+      <!-- pH — hidden for: Pink Nana, Tropical, Milky Way, Avocado Banana, Americano, Patria, Kintamani -->
+      <div class="form-row param-row" id="row_ph">
+        <div class="field-label">
+          pH
+          <span class="spec-tag" id="spec_ph">4.5 – 5.5</span>
+        </div>
+        <input class="form-input" id="f_ph" type="number" step="0.01" min="0" max="14" placeholder="0.00 – 14.00" oninput="checkSpec('ph')">
+        <div class="field-status" id="s_ph"></div>
+      </div>
+
+      <!-- Brix — all products -->
+      <div class="form-row param-row" id="row_brix">
+        <div class="field-label">
+          Brix (°Bx)
+          <span class="spec-tag" id="spec_brix">5.0 – 6.0</span>
+        </div>
+        <input class="form-input" id="f_brix" type="number" step="0.01" min="0" max="30" placeholder="0.00 – 30.00" oninput="checkSpec('brix')">
+        <div class="field-status" id="s_brix"></div>
+      </div>
+
+      <!-- Temperature — hidden for Americano, Patria, Kintamani -->
+      <div class="form-row param-row" id="row_temp">
+        <div class="field-label">
+          Temperature (°C)
+          <span class="spec-tag" id="spec_temp">2 – 10°C</span>
+        </div>
+        <input class="form-input" id="f_temp" type="number" step="0.1" min="0" max="100" placeholder="0.0 – 100.0°C" oninput="checkSpec('temp')">
+        <div class="field-status" id="s_temp"></div>
+      </div>
+
+      <!-- TDS — only for Americano, Patria, Kintamani -->
+      <div class="form-row param-row hidden" id="row_tds">
+        <div class="field-label">
+          Total Dissolved Solids (ppm)
+          <span class="spec-tag" id="spec_tds">—</span>
+        </div>
+        <input class="form-input" id="f_tds" type="number" step="1" min="0" max="9999" placeholder="0 – 9999 ppm" oninput="checkSpec('tds')">
+        <div class="field-status" id="s_tds"></div>
+      </div>
+    </div>
+
+    <!-- OVERALL BANNER -->
+    <div class="overall-banner" id="overallBanner">
+      <span class="ob-icon" id="obIcon">✓</span>
+      <span class="ob-text" id="obText">Semua parameter dalam batas spec</span>
+      <span class="ob-label" id="obLabel">PASS</span>
+    </div>
+
+    <!-- 3. SENSORY -->
+    <div class="section-card">
+      <div class="section-hd">
+        <div class="section-num">3</div>
+        <div class="section-title">Evaluasi Sensori</div>
+      </div>
+      <div class="sensory-grid">
+        <div class="sensory-item">
+          <label>Warna (Color)</label>
+          <select class="form-input" id="f_color">
+            <option value="">Pilih</option>
+          </select>
+        </div>
+        <div class="sensory-item">
+          <label>Aroma</label>
+          <select class="form-input" id="f_aroma">
+            <option value="">Pilih</option>
+            <option>Fresh / Characteristic</option>
+            <option>Mild</option>
+            <option>Slightly Off</option>
+            <option>Fermented</option>
+            <option>Sour</option>
+            <option>Off-Odor</option>
+          </select>
+        </div>
+        <div class="sensory-item">
+          <label>Rasa (Taste)</label>
+          <select class="form-input" id="f_taste">
+            <option value="">Pilih</option>
+            <option>Fresh / Sweet</option>
+            <option>Mild Sweet</option>
+            <option>Slightly Sour</option>
+            <option>Sour</option>
+            <option>Bitter</option>
+            <option>Off-Flavor</option>
+          </select>
+        </div>
+        <div class="sensory-item">
+          <label>Tekstur (Texture)</label>
+          <select class="form-input" id="f_texture">
+            <option value="">Pilih</option>
+            <option>Smooth / Watery</option>
+            <option>Slightly Viscous</option>
+            <option>Viscous</option>
+            <option>Gritty</option>
+            <option>Slimy</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. NOTES -->
+    <div class="section-card">
+      <div class="section-hd">
+        <div class="section-num">4</div>
+        <div class="section-title">Catatan</div>
+      </div>
+      <div class="form-row">
+        <textarea class="form-input" id="f_notes" rows="3" placeholder="Catatan opsional…" style="resize:vertical;"></textarea>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="submit-bar">
+    <button class="submit-btn" id="submitBtn" onclick="submitEntry()">Kirim Data QC ✓</button>
+  </div>
+</div>
+
+<!-- ═══ DASHBOARD VIEW ═══ -->
+<div id="dashView" class="view">
+  <div class="dash-wrap">
+    <div class="dash-hd">
+      <div>
+        <div class="dash-title">QC Log Dashboard 📋</div>
+        <div class="dash-sub" id="dashSub">Memuat data…</div>
+      </div>
+      <button class="refresh-btn" onclick="loadDashboard()">↺ Refresh</button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total Entries</div>
+        <div class="stat-val clr-orange" id="statTotal">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pass ✅</div>
+        <div class="stat-val clr-pass" id="statPass">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Fail ❌</div>
+        <div class="stat-val clr-fail" id="statFail">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pass Rate</div>
+        <div class="stat-val" id="statRate">—</div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <div class="filter-group">
+        <div class="filter-label">Produk</div>
+        <select class="filter-input" id="flt_product">
+          <option value="">Semua produk</option>
+          <option>Coconut Water</option>
+          <option>Espresso</option>
+          <option>Patria</option>
+          <option>Kintamani</option>
+          <option>Pink Nana</option>
+          <option>Tropical</option>
+          <option>Milky Way</option>
+          <option>Avocado Banana</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Batch</div>
+        <input class="filter-input" id="flt_batch" type="text" placeholder="Semua batch">
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">User</div>
+        <input class="filter-input" id="flt_user" type="text" placeholder="Semua user">
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Tanggal</div>
+        <input class="filter-input" id="flt_date" type="date">
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Status</div>
+        <select class="filter-input" id="flt_status">
+          <option value="">Semua</option>
+          <option value="PASS">PASS</option>
+          <option value="FAIL">FAIL</option>
+        </select>
+      </div>
+      <div class="filter-actions">
+        <button class="filter-btn primary" onclick="applyFilters()">Filter</button>
+        <button class="filter-btn" onclick="clearFilters()">Clear</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="logTable">
+        <thead>
+          <tr>
+            <th onclick="sortTable('timestamp')">Waktu ↕</th>
+            <th onclick="sortTable('user')">User ↕</th>
+            <th onclick="sortTable('product')">Produk ↕</th>
+            <th onclick="sortTable('batch')">Batch ↕</th>
+            <th>pH</th>
+            <th>pH Status</th>
+            <th>Brix</th>
+            <th>Brix Status</th>
+            <th>Temp °C</th>
+            <th>Temp Status</th>
+            <th>TDS (ppm)</th>
+            <th>TDS Status</th>
+            <th>Color</th>
+            <th>Aroma</th>
+            <th>Taste</th>
+            <th>Texture</th>
+            <th onclick="sortTable('overall_status')">Overall ↕</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="logBody">
+          <tr><td colspan="18">
+            <div class="empty-state">
+              <div class="empty-icon">🚀</div>
+              <div class="empty-text">Belum ada data. Submit entry pertamamu!</div>
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  CONFIG — Edit spec ranges here, add new products below
+// ══════════════════════════════════════════════════════════════
+const CONFIG = {
+  SHEET_URL: "https://wvhjjhcxelqccyclgrzd.supabase.co",
+
+  // Which fields each product uses
+  PRODUCT_FIELDS: {
+    "Coconut Water":    { ph: true,  brix: true, temp: true,  tds: false },
+    "Espresso":         { ph: false, brix: true, temp: false, tds: true  },
+    "Patria":           { ph: false, brix: true, temp: false, tds: true  },
+    "Kintamani":        { ph: false, brix: true, temp: false, tds: true  },
+    "Pink Nana":        { ph: false, brix: true, temp: true,  tds: false },
+    "Tropical":         { ph: false, brix: true, temp: true,  tds: false },
+    "Milky Way":        { ph: false, brix: true, temp: true,  tds: false },
+    "Avocado Banana":   { ph: false, brix: true, temp: true,  tds: false },
+  },
+
+  // Spec ranges per product
+  SPECS: {
+    "Coconut Water": {
+      ph:   { min: 4.5, max: 5.5 },
+      brix: { min: 5.0, max: 6.0 },
+      temp: { min: 2.0, max: 10.0 },
+      tds:  null
+    },
+    "Espresso": {
+      ph:   null,
+      brix: { min: 7.0, max: 9.0 },
+      temp: null,
+      tds:  { min: 500, max: 1500 }
+    },
+    "Patria": {
+      ph:   null,
+      brix: { min: 6.0, max: 8.0 },
+      temp: null,
+      tds:  { min: 400, max: 1200 }
+    },
+    "Kintamani": {
+      ph:   null,
+      brix: { min: 6.5, max: 8.5 },
+      temp: null,
+      tds:  { min: 450, max: 1300 }
+    },
+    "Pink Nana": {
+      ph:   null,
+      brix: { min: 8.0, max: 11.0 },
+      temp: { min: 2.0, max: 8.0 },
+      tds:  null
+    },
+    "Tropical": {
+      ph:   null,
+      brix: { min: 9.0, max: 12.0 },
+      temp: { min: 2.0, max: 8.0 },
+      tds:  null
+    },
+    "Milky Way": {
+      ph:   null,
+      brix: { min: 10.0, max: 14.0 },
+      temp: { min: 2.0, max: 8.0 },
+      tds:  null
+    },
+    "Avocado Banana": {
+      ph:   null,
+      brix: { min: 11.0, max: 15.0 },
+      temp: { min: 2.0, max: 8.0 },
+      tds:  null
+    }
+  }
+};
+
+// Product emojis for badge
+const PRODUCT_EMOJI = {
+  "Coconut Water": "🥥", "Espresso": "☕", "Patria": "🌿",
+  "Kintamani": "🏔️", "Pink Nana": "🍌", "Tropical": "🌴",
+  "Milky Way": "🥛", "Avocado Banana": "🥑"
+};
+
+// Color options per product group
+const COLOR_OPTIONS = {
+  coffee: ["Black", "Dark Brown", "Medium Brown"],
+  fruit:  ["Sesuai", "Tidak Sesuai (Deskripsikan)"],
+  default:["Clear / Transparent", "Slightly Cloudy", "Cloudy", "Light Yellow", "Yellow", "Dark / Discolored"]
+};
+const COLOR_GROUP = {
+  "Coconut Water":  "default",
+  "Espresso":       "coffee",
+  "Patria":         "coffee",
+  "Kintamani":      "coffee",
+  "Pink Nana":      "fruit",
+  "Tropical":       "fruit",
+  "Milky Way":      "fruit",
+  "Avocado Banana": "fruit"
+};
+
+// ══ STATE ══
+let currentUser = null;
+let allRecords = [];
+let sortKey = 'timestamp';
+let sortDir = -1;
+
+// ══ LOGIN ══
+function login() {
+  const sel = document.getElementById('userSelect');
+  if (!sel.value) { showToast('Pilih namamu dulu ya! 😊', 'error'); return; }
+  currentUser = sel.value;
+  document.getElementById('loginView').classList.remove('active');
+  document.getElementById('mainNav').style.display = 'flex';
+  document.getElementById('formView').classList.add('active');
+  document.getElementById('navUser').textContent = currentUser.split(' ')[0];
+  document.getElementById('navAvatar').textContent = currentUser.charAt(0).toUpperCase();
+  updateDateTime();
+  setInterval(updateDateTime, 10000);
+  onProductChange();
+}
+
+// ══ DATE/TIME ══
+function updateDateTime() {
+  const now = new Date();
+  document.getElementById('f_date').textContent = now.toLocaleDateString('id-ID', {day:'2-digit',month:'short',year:'numeric'});
+  document.getElementById('f_time').textContent = now.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'});
+}
+
+// ══ TABS ══
+function switchTab(tab) {
+  ['form','dash'].forEach(t => {
+    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active', t===tab);
+    document.getElementById(t+'View').classList.toggle('active', t===tab);
+  });
+  if (tab==='dash') loadDashboard();
+}
+
+// ══ PRODUCT CHANGE — show/hide fields & update spec tags ══
+function onProductChange() {
+  const product = document.getElementById('f_product').value;
+  const fields = CONFIG.PRODUCT_FIELDS[product] || { ph:true, brix:true, temp:true, tds:false };
+  const specs  = CONFIG.SPECS[product] || {};
+
+  // Toggle rows
+  document.getElementById('row_ph').classList.toggle('hidden', !fields.ph);
+  document.getElementById('row_brix').classList.toggle('hidden', !fields.brix);
+  document.getElementById('row_temp').classList.toggle('hidden', !fields.temp);
+  document.getElementById('row_tds').classList.toggle('hidden', !fields.tds);
+
+  // Clear values in hidden fields
+  if (!fields.ph)   { clearField('ph'); }
+  if (!fields.brix) { clearField('brix'); }
+  if (!fields.temp) { clearField('temp'); }
+  if (!fields.tds)  { clearField('tds'); }
+
+  // Update spec tags
+  if (fields.ph && specs.ph)     updateSpecTag('ph',   `${specs.ph.min} – ${specs.ph.max}`);
+  if (fields.brix && specs.brix) updateSpecTag('brix', `${specs.brix.min} – ${specs.brix.max}°Bx`);
+  if (fields.temp && specs.temp) updateSpecTag('temp', `${specs.temp.min} – ${specs.temp.max}°C`);
+  if (fields.tds && specs.tds)   updateSpecTag('tds',  `${specs.tds.min} – ${specs.tds.max} ppm`);
+
+  // Update product badge
+  const badge = document.getElementById('productBadge');
+  badge.style.display = 'flex';
+  badge.querySelector('.product-badge-icon').textContent = PRODUCT_EMOJI[product] || '🧪';
+  document.getElementById('productHint').textContent = product;
+
+  // Update color dropdown options
+  const colorSel = document.getElementById('f_color');
+  const group = COLOR_GROUP[product] || 'default';
+  const opts = COLOR_OPTIONS[group];
+  colorSel.innerHTML = '<option value="">Pilih</option>' + opts.map(o => `<option>${o}</option>`).join('');
+
+  updateOverall();
+}
+
+function updateSpecTag(field, text) {
+  const el = document.getElementById('spec_' + field);
+  if (el) el.textContent = text;
+}
+
+function clearField(field) {
+  const input = document.getElementById('f_' + field);
+  if (input) { input.value = ''; input.classList.remove('is-pass','is-fail'); }
+  const status = document.getElementById('s_' + field);
+  if (status) { status.innerHTML = ''; status.className = 'field-status'; }
+}
+
+// ══ SPEC CHECK ══
+function checkSpec(field) {
+  const product = document.getElementById('f_product').value;
+  const specs   = CONFIG.SPECS[product] || {};
+  const spec    = specs[field];
+  const input   = document.getElementById('f_' + field);
+  const statusEl = document.getElementById('s_' + field);
+  const labelMap = { ph: 'pH', brix: 'Brix', temp: 'Suhu', tds: 'TDS' };
+
+  input.classList.remove('is-pass','is-fail');
+  statusEl.className = 'field-status';
+  statusEl.innerHTML = '';
+
+  if (input.value === '' || !spec) { updateOverall(); return; }
+
+  const val = parseFloat(input.value);
+  if (isNaN(val)) { updateOverall(); return; }
+
+  if (val >= spec.min && val <= spec.max) {
+    input.classList.add('is-pass');
+    statusEl.innerHTML = `<span class="pill pass"><span class="dot"></span> PASS — dalam batas spec (${spec.min}–${spec.max})</span>`;
+  } else {
+    input.classList.add('is-fail');
+    statusEl.innerHTML = `<span class="pill fail"><span class="dot"></span> ⚠️ OUT OF SPEC — ${labelMap[field]} harus ${spec.min}–${spec.max}</span>`;
+  }
+  updateOverall();
+}
+
+function updateOverall() {
+  const fields = ['ph','brix','temp','tds'];
+  const filled = fields.map(f => document.getElementById('f_' + f)).filter(el => el && el.value !== '' && !el.closest('.param-row').classList.contains('hidden'));
+  const banner = document.getElementById('overallBanner');
+  if (filled.length === 0) { banner.style.display = 'none'; return; }
+
+  const anyFail = filled.some(el => el.classList.contains('is-fail'));
+  banner.style.display = 'flex';
+  banner.className = 'overall-banner ' + (anyFail ? 'fail' : 'pass');
+  document.getElementById('obIcon').textContent  = anyFail ? '⚠️' : '✅';
+  document.getElementById('obText').textContent  = anyFail ? 'Ada parameter di luar batas spec!' : 'Semua parameter dalam batas spec';
+  document.getElementById('obLabel').textContent = anyFail ? 'FAIL' : 'PASS';
+}
+
+function computeStatus(val, spec) {
+  if (val === '' || val === null || val === undefined || isNaN(parseFloat(val)) || !spec) return 'N/A';
+  return parseFloat(val) >= spec.min && parseFloat(val) <= spec.max ? 'PASS' : 'OUT OF SPEC';
+}
+
+// ══ SUBMIT ══
+async function submitEntry() {
+  const batch = document.getElementById('f_batch').value.trim();
+  if (!batch) { showToast('Isi nomor batch dulu ya! 📦', 'error'); return; }
+
+  const product = document.getElementById('f_product').value;
+  const fields  = CONFIG.PRODUCT_FIELDS[product] || {};
+  const specs   = CONFIG.SPECS[product] || {};
+
+  const ph   = fields.ph   ? document.getElementById('f_ph').value   : '';
+  const brix = fields.brix ? document.getElementById('f_brix').value : '';
+  const temp = fields.temp ? document.getElementById('f_temp').value  : '';
+  const tds  = fields.tds  ? document.getElementById('f_tds').value   : '';
+
+  const phStatus   = fields.ph   ? computeStatus(ph,   specs.ph)   : 'N/A';
+  const brixStatus = fields.brix ? computeStatus(brix, specs.brix) : 'N/A';
+  const tempStatus = fields.temp ? computeStatus(temp, specs.temp) : 'N/A';
+  const tdsStatus  = fields.tds  ? computeStatus(tds,  specs.tds)  : 'N/A';
+
+  const measured = [phStatus, brixStatus, tempStatus, tdsStatus].filter(s => s !== 'N/A');
+  const overallStatus = measured.length > 0
+    ? (measured.includes('OUT OF SPEC') ? 'FAIL' : 'PASS')
+    : 'N/A';
+
+  const now = new Date();
+  const payload = {
+    timestamp: now.toISOString(),
+    user: currentUser,
+    product,
+    batch,
+    date: now.toLocaleDateString('id-ID'),
+    time: now.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'}),
+    ph, ph_status: phStatus,
+    brix, brix_status: brixStatus,
+    temperature: temp, temp_status: tempStatus,
+    tds, tds_status: tdsStatus,
+    color:   document.getElementById('f_color').value,
+    aroma:   document.getElementById('f_aroma').value,
+    taste:   document.getElementById('f_taste').value,
+    texture: document.getElementById('f_texture').value,
+    notes:   document.getElementById('f_notes').value,
+    overall_status: overallStatus
+  };
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Mengirim…';
+
+  if (CONFIG.SHEET_URL === "https://wvhjjhcxelqccyclgrzd.supabase.co") {
+    allRecords.unshift({...payload});
+    await new Promise(r => setTimeout(r, 700));
+    showToast('Data tersimpan! (demo mode) 🎉', 'success');
+  } else {
+    try {
+      await fetch(CONFIG.SHEET_URL, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      showToast('Data QC berhasil dikirim! ✅', 'success');
+    } catch(e) {
+      showToast('Gagal kirim — cek koneksi 😅', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Kirim Data QC ✓';
+      return;
+    }
+  }
+
+  resetForm();
+  btn.disabled = false;
+  btn.textContent = 'Kirim Data QC ✓';
+}
+
+function resetForm() {
+  ['ph','brix','temp','tds'].forEach(f => clearField(f));
+  document.getElementById('f_batch').value = '';
+  ['f_color','f_aroma','f_taste','f_texture'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('f_notes').value = '';
+  document.getElementById('overallBanner').style.display = 'none';
+}
+
+// ══ DASHBOARD ══
+async function loadDashboard() {
+  document.getElementById('dashSub').textContent = 'Memuat data…';
+  if (CONFIG.SHEET_URL === "https://wvhjjhcxelqccyclgrzd.supabase.co") {
+    renderTable(allRecords);
+    document.getElementById('dashSub').textContent = `${allRecords.length} entri (demo mode)`;
+    return;
+  }
+  try {
+    const res = await fetch(CONFIG.SHEET_URL + '?action=read');
+    const data = await res.json();
+    allRecords = data.records || [];
+    allRecords.sort((a,b) => new Date(b.timestamp)-new Date(a.timestamp));
+    renderTable(allRecords);
+    document.getElementById('dashSub').textContent = `${allRecords.length} total entri · diperbarui ${new Date().toLocaleTimeString('id-ID')}`;
+  } catch(e) {
+    document.getElementById('dashSub').textContent = 'Gagal memuat. Cek URL Sheet.';
+  }
+}
+
+function applyFilters() {
+  const product = document.getElementById('flt_product').value;
+  const batch   = document.getElementById('flt_batch').value.toLowerCase();
+  const user    = document.getElementById('flt_user').value.toLowerCase();
+  const date    = document.getElementById('flt_date').value;
+  const status  = document.getElementById('flt_status').value;
+  const filtered = allRecords.filter(r => {
+    if (product && r.product !== product) return false;
+    if (batch && !(r.batch||'').toLowerCase().includes(batch)) return false;
+    if (user && !(r.user||'').toLowerCase().includes(user)) return false;
+    if (date && !r.timestamp.startsWith(date)) return false;
+    if (status && r.overall_status !== status) return false;
+    return true;
+  });
+  renderTable(filtered);
+}
+
+function clearFilters() {
+  ['flt_batch','flt_user','flt_date'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('flt_product').value = '';
+  document.getElementById('flt_status').value = '';
+  renderTable(allRecords);
+}
+
+function sortTable(key) {
+  sortDir = sortKey === key ? sortDir * -1 : -1;
+  sortKey = key;
+  allRecords.sort((a,b) => {
+    const av = a[key]||'', bv = b[key]||'';
+    return av < bv ? sortDir : av > bv ? -sortDir : 0;
+  });
+  renderTable(allRecords);
+}
+
+function renderTable(records) {
+  const total = records.length;
+  const pass  = records.filter(r => r.overall_status==='PASS').length;
+  const fail  = records.filter(r => r.overall_status==='FAIL').length;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statPass').textContent  = pass;
+  document.getElementById('statFail').textContent  = fail;
+  document.getElementById('statRate').textContent  = total > 0 ? Math.round(pass/total*100)+'%' : '—';
+
+  const tbody = document.getElementById('logBody');
+  if (!records.length) {
+    tbody.innerHTML = `<tr><td colspan="18"><div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">Tidak ada data yang sesuai filter</div></div></td></tr>`;
+    return;
+  }
+
+  const badge = s =>
+    s === 'PASS'        ? `<span class="badge badge-pass">✓ PASS</span>` :
+    s === 'OUT OF SPEC' ? `<span class="badge badge-fail">✕ OUT OF SPEC</span>` :
+                          `<span class="badge badge-na">${s||'—'}</span>`;
+
+  tbody.innerHTML = records.map(r => {
+    const isFail = r.overall_status === 'FAIL';
+    const ts = r.timestamp ? new Date(r.timestamp).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    const emoji = PRODUCT_EMOJI[r.product] || '🧪';
+    return `<tr class="${isFail?'row-fail':''}">
+      <td style="font-size:12px;color:var(--text2);font-weight:500;">${ts}</td>
+      <td style="font-weight:600;">${r.user||'—'}</td>
+      <td style="font-weight:600;">${emoji} ${r.product||'—'}</td>
+      <td style="font-size:12px;font-weight:600;color:var(--text2);">${r.batch||'—'}</td>
+      <td style="font-weight:600;">${r.ph||'—'}</td>
+      <td>${badge(r.ph_status)}</td>
+      <td style="font-weight:600;">${r.brix||'—'}</td>
+      <td>${badge(r.brix_status)}</td>
+      <td style="font-weight:600;">${r.temperature||'—'}</td>
+      <td>${badge(r.temp_status)}</td>
+      <td style="font-weight:600;">${r.tds||'—'}</td>
+      <td>${badge(r.tds_status)}</td>
+      <td style="font-size:12px;">${r.color||'—'}</td>
+      <td style="font-size:12px;">${r.aroma||'—'}</td>
+      <td style="font-size:12px;">${r.taste||'—'}</td>
+      <td style="font-size:12px;">${r.texture||'—'}</td>
+      <td>${badge(r.overall_status)}</td>
+      <td style="font-size:12px;max-width:160px;white-space:normal;color:var(--text2);">${r.notes||''}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ══ TOAST ══
+function showToast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+</script>
+</body>
+</html>
