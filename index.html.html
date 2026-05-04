@@ -706,8 +706,18 @@ tbody tr.row-fail:hover { background: #FFE8E8; }
 // ══════════════════════════════════════════════════════════════
 //  CONFIG — Edit spec ranges here, add new products below
 // ══════════════════════════════════════════════════════════════
+// SUPABASE CONNECTION
+const SUPABASE_URL = "https://wvhjjhxcelqccyclgrzd.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2aGpqaHhjZWxxY2N5Y2xncnpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2Mjg4OTgsImV4cCI6MjA5MzIwNDg5OH0.ra_D5mfKJ_Qce5oYCrSInj7rGNyB0n097z83YMxpXBo";
+const TABLE = "qc_daily";
+const SUPA_HEADERS = {
+  "Content-Type": "application/json",
+  "apikey": SUPABASE_KEY,
+  "Authorization": "Bearer " + SUPABASE_KEY,
+  "Prefer": "return=representation"
+};
+
 const CONFIG = {
-  SHEET_URL: "https://wvhjjhcxelqccyclgrzd.supabase.co",
 
   // Which fields each product uses
   PRODUCT_FIELDS: {
@@ -981,27 +991,23 @@ async function submitEntry() {
   btn.disabled = true;
   btn.textContent = 'Mengirim…';
 
-  if (CONFIG.SHEET_URL === "https://wvhjjhcxelqccyclgrzd.supabase.co") {
-    allRecords.unshift({...payload});
-    await new Promise(r => setTimeout(r, 700));
-    showToast('Data tersimpan! (demo mode) 🎉', 'success');
-  } else {
-    try {
-      await fetch(CONFIG.SHEET_URL, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify(payload)
-      });
-      showToast('Data QC berhasil dikirim! ✅', 'success');
-    } catch(e) {
-      showToast('Gagal kirim — cek koneksi 😅', 'error');
-      btn.disabled = false;
-      btn.textContent = 'Kirim Data QC ✓';
-      return;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}`, {
+      method: 'POST',
+      headers: SUPA_HEADERS,
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || res.status);
     }
+    showToast('Data QC berhasil disimpan! ✅', 'success');
+    resetForm();
+  } catch(e) {
+    console.error(e);
+    showToast('Gagal simpan: ' + e.message + ' 😅', 'error');
   }
 
-  resetForm();
   btn.disabled = false;
   btn.textContent = 'Kirim Data QC ✓';
 }
@@ -1017,20 +1023,18 @@ function resetForm() {
 // ══ DASHBOARD ══
 async function loadDashboard() {
   document.getElementById('dashSub').textContent = 'Memuat data…';
-  if (CONFIG.SHEET_URL === "https://wvhjjhcxelqccyclgrzd.supabase.co") {
-    renderTable(allRecords);
-    document.getElementById('dashSub').textContent = `${allRecords.length} entri (demo mode)`;
-    return;
-  }
   try {
-    const res = await fetch(CONFIG.SHEET_URL + '?action=read');
-    const data = await res.json();
-    allRecords = data.records || [];
-    allRecords.sort((a,b) => new Date(b.timestamp)-new Date(a.timestamp));
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/${TABLE}?select=*&order=timestamp.desc&limit=500`,
+      { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } }
+    );
+    if (!res.ok) throw new Error(res.status);
+    allRecords = await res.json();
     renderTable(allRecords);
     document.getElementById('dashSub').textContent = `${allRecords.length} total entri · diperbarui ${new Date().toLocaleTimeString('id-ID')}`;
   } catch(e) {
-    document.getElementById('dashSub').textContent = 'Gagal memuat. Cek URL Sheet.';
+    console.error(e);
+    document.getElementById('dashSub').textContent = 'Gagal memuat data dari Supabase. Cek koneksi.';
   }
 }
 
