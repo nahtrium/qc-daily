@@ -1358,22 +1358,35 @@ let chartInstances = {};
 // ── TRIGGER: user clicks "Coba dianalisis" ──────────────────
 async function triggerAnalytics() {
   const btn = document.getElementById('analyzeChartsBtn');
+
+  // Guard: make sure Chart.js CDN has loaded
+  if (typeof Chart === 'undefined') {
+    showToast('Chart.js belum dimuat. Cek koneksi internet kamu.', 'error');
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = '⏳ Memuat data…';
 
-  // Make sure we have fresh data from Supabase
+  // Fetch fresh data from Supabase (populates allRecords)
   await loadDashboard();
 
-  // Show the panels
+  if (!allRecords || allRecords.length === 0) {
+    showToast('Belum ada data untuk ditampilkan di chart.', 'info');
+    btn.disabled = false;
+    btn.textContent = '🔍 Coba dianalisis';
+    return;
+  }
+
+  // Show the analytics panels section
   document.getElementById('analyticsPanels').classList.add('visible');
 
-  // Draw all charts from allRecords (already loaded by loadDashboard)
+  // Draw all 4 charts — each function handles its own canvas by ID
   drawHistogram(allRecords);
   drawPareto(allRecords);
   drawControlChart('ph',   allRecords);
   drawControlChart('brix', allRecords);
 
-  // Update button to allow re-run
   btn.disabled = false;
   btn.textContent = '🔄 Refresh Charts';
 }
@@ -1390,6 +1403,7 @@ function calcStdDev(arr, mean) {
 }
 
 // ── CHART THEME ──────────────────────────────────────────────
+// Define color constants immediately (no Chart dependency here)
 const CHART_FONT = "'Plus Jakarta Sans', sans-serif";
 const C = {
   orange: '#FF6B35', orangeLight: 'rgba(255,107,53,0.15)',
@@ -1399,153 +1413,301 @@ const C = {
   text:   '#1A1208', text2:       '#6B5B47', text3: '#A89580',
   border: '#E8DDD0'
 };
-Chart.defaults.font.family = CHART_FONT;
-Chart.defaults.color = C.text2;
+// Apply Chart.js global defaults after DOM (and CDN script) has loaded
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof Chart !== 'undefined') {
+    Chart.defaults.font.family = CHART_FONT;
+    Chart.defaults.color = C.text2;
+  }
+});
 
+// ─────────────────────────────────────────────────────────────
+// HELPER: destroy a chart instance before redrawing
+// This prevents "Canvas is already in use" errors in Chart.js
+// ─────────────────────────────────────────────────────────────
 function destroyChart(id) {
-  if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+  // Destroy the Chart.js instance to free the canvas
+  if (chartInstances[id]) {
+    chartInstances[id].destroy();
+    delete chartInstances[id];
+  }
+  // Also find the matching canvas and clear it manually.
+  // Chart.js 4 sometimes leaves ghost state on the canvas element
+  // that causes "Canvas is already in use by Chart" on redraw.
+  var canvasMap = {
+    'histogram':  'chartHistogram',
+    'pareto':     'chartPareto',
+    'phControl':  'chartPh',
+    'brixControl':'chartBrix'
+  };
+  var canvasId = canvasMap[id];
+  if (canvasId) {
+    var el = document.getElementById(canvasId);
+    if (el) {
+      // Remove and re-add the canvas to fully reset its state
+      var parent = el.parentNode;
+      var clone = el.cloneNode(false); // cloneNode(false) = no children
+      parent.replaceChild(clone, el);
+    }
+  }
 }
 
+// HELPER: hide the loading spinner and show the canvas
 function showCanvas(loaderId, canvasId) {
-  document.getElementById(loaderId).style.display = 'none';
-  document.getElementById(canvasId).style.display = 'block';
+  // Hide the loading spinner
+  var loader = document.getElementById(loaderId);
+  if (loader) loader.style.display = 'none';
+  // Show the canvas — must be visible BEFORE Chart.js draws on it
+  var canvas = document.getElementById(canvasId);
+  if (canvas) {
+    canvas.style.display = 'block';
+    // Ensure canvas has explicit dimensions so Chart.js can calculate layout
+    if (!canvas.style.width)  canvas.style.width  = '100%';
+    if (!canvas.style.height) canvas.style.height = '100%';
+  }
 }
 
-// ── 1. HISTOGRAM: distribution of out-of-spec numeric values ─
-function drawHistogram(records) {
+// ─────────────────────────────────────────────────────────────
+// 1. HISTOGRAM — distribution of all out-of-spec values
+//    Groups every numeric value that was flagged OUT OF SPEC
+//    into automatic bins and shows how often each range occurs
+// ─────────────────────────────────────────────────────────────
+function drawHistogram(data) {
+  // Always destroy the old chart first
   destroyChart('histogram');
-
-  // Collect all numeric OUT OF SPEC values (ph, brix, temperature, tds)
-  const vals = [];
-  records.forEach(r => {
-    if (r.ph_status   === 'OUT OF SPEC' && r.ph          !== '') vals.push({ v: parseFloat(r.ph),          label: 'pH'   });
-    if (r.brix_status === 'OUT OF SPEC' && r.brix        !== '') vals.push({ v: parseFloat(r.brix),        label: 'Brix' });
-    if (r.temp_status === 'OUT OF SPEC' && r.temperature !== '') vals.push({ v: parseFloat(r.temperature), label: 'Temp' });
-    if (r.tds_status  === 'OUT OF SPEC' && r.tds         !== '') vals.push({ v: parseFloat(r.tds),         label: 'TDS'  });
-  });
-
   showCanvas('loadHist', 'chartHistogram');
+
+  // Get the 2d drawing context from the canvas element
   const ctx = document.getElementById('chartHistogram').getContext('2d');
 
-  if (!vals.length) {
-    // No out-of-spec data — show a nice empty state on canvas
+  // Step 1: Collect every out-of-spec numeric value across all parameters
+  const values = [];
+  data.forEach(function(row) {
+    if (row.ph_status === 'OUT OF SPEC' && row.ph !== '' && row.ph !== null) {
+      values.push(parseFloat(row.ph));
+    }
+    if (row.brix_status === 'OUT OF SPEC' && row.brix !== '' && row.brix !== null) {
+      values.push(parseFloat(row.brix));
+    }
+    if (row.temp_status === 'OUT OF SPEC' && row.temperature !== '' && row.temperature !== null) {
+      values.push(parseFloat(row.temperature));
+    }
+    if (row.tds_status === 'OUT OF SPEC' && row.tds !== '' && row.tds !== null) {
+      values.push(parseFloat(row.tds));
+    }
+  });
+
+  // Remove NaN values from bad data
+  const clean = values.filter(function(v) { return !isNaN(v); });
+
+  // If no out-of-spec data exists, show a green "all good" chart
+  if (clean.length === 0) {
     chartInstances['histogram'] = new Chart(ctx, {
       type: 'bar',
-      data: { labels: ['Tidak ada data Out of Spec 🎉'], datasets: [{ data: [0], backgroundColor: C.greenLight }] },
-      options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
+      data: {
+        labels: ['Tidak ada Out of Spec 🎉'],
+        datasets: [{ data: [0], backgroundColor: 'rgba(46,213,115,0.2)', borderColor: '#2ED573', borderWidth: 2 }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: { y: { display: false }, x: { grid: { display: false } } }
+      }
     });
     return;
   }
 
-  // Create automatic bins based on value range
-  const numValues = vals.map(x => x.v).filter(v => !isNaN(v));
-  const minV = Math.min(...numValues);
-  const maxV = Math.max(...numValues);
-  const BIN_COUNT = Math.min(10, Math.ceil(Math.sqrt(numValues.length)));
-  const binSize = (maxV - minV) / BIN_COUNT || 1;
+  // Step 2: Build automatic bins using Sturges' rule (sqrt of count, max 10 bins)
+  const minVal = Math.min.apply(null, clean);
+  const maxVal = Math.max.apply(null, clean);
+  const binCount = Math.min(10, Math.max(3, Math.ceil(Math.sqrt(clean.length))));
+  const binSize  = (maxVal - minVal) / binCount || 1; // fallback to 1 if all values equal
 
-  const bins = Array.from({ length: BIN_COUNT }, (_, i) => ({
-    label: `${(minV + i * binSize).toFixed(2)}–${(minV + (i+1) * binSize).toFixed(2)}`,
-    count: 0
-  }));
+  // Create empty bins with labels like "4.50–4.80"
+  var bins = [];
+  for (var i = 0; i < binCount; i++) {
+    bins.push({
+      label: (minVal + i * binSize).toFixed(2) + '–' + (minVal + (i + 1) * binSize).toFixed(2),
+      count: 0
+    });
+  }
 
-  numValues.forEach(v => {
-    let idx = Math.floor((v - minV) / binSize);
-    if (idx >= BIN_COUNT) idx = BIN_COUNT - 1;
+  // Step 3: Place each value into its bin
+  clean.forEach(function(v) {
+    var idx = Math.floor((v - minVal) / binSize);
+    if (idx >= binCount) idx = binCount - 1; // clamp last value into final bin
     bins[idx].count++;
   });
 
+  // Step 4: Draw the chart
   chartInstances['histogram'] = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: bins.map(b => b.label),
+      labels: bins.map(function(b) { return b.label; }),
       datasets: [{
         label: 'Frekuensi Out of Spec',
-        data: bins.map(b => b.count),
-        backgroundColor: C.orangeLight,
-        borderColor: C.orange,
+        data: bins.map(function(b) { return b.count; }),
+        backgroundColor: 'rgba(255,107,53,0.18)',
+        borderColor: '#FF6B35',
         borderWidth: 2,
-        borderRadius: 6
+        borderRadius: 6,
+        borderSkipped: false
       }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
+      responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { title: t => 'Nilai: ' + t[0].label, label: t => `${t.raw} kejadian` } }
+        tooltip: {
+          callbacks: {
+            title: function(items) { return 'Range: ' + items[0].label; },
+            label: function(item) { return item.raw + ' kejadian'; }
+          }
+        }
       },
       scales: {
-        x: { grid: { color: C.border }, ticks: { maxRotation: 45, font: { size: 10 } } },
-        y: { grid: { color: C.border }, ticks: { stepSize: 1 }, title: { display: true, text: 'Frekuensi', font: { size: 11, weight: '700' } } }
+        x: {
+          grid: { color: '#E8DDD0' },
+          ticks: { maxRotation: 40, font: { size: 10 } }
+        },
+        y: {
+          grid: { color: '#E8DDD0' },
+          beginAtZero: true,
+          ticks: { stepSize: 1, font: { size: 10 } },
+          title: { display: true, text: 'Frekuensi', font: { size: 11, weight: '700' } }
+        }
       }
     }
   });
 }
 
-// ── 2. PARETO: OUT OF SPEC count per product ─────────────────
-function drawPareto(records) {
+// ─────────────────────────────────────────────────────────────
+// 2. PARETO CHART — defect frequency by product
+//    Bars = number of FAIL entries per product (descending)
+//    Line = cumulative % (Pareto principle: 80/20 rule)
+//    Uses a dual Y-axis: left = count, right = percentage
+// ─────────────────────────────────────────────────────────────
+function drawPareto(data) {
   destroyChart('pareto');
   showCanvas('loadPareto', 'chartPareto');
+
   const ctx = document.getElementById('chartPareto').getContext('2d');
 
-  // Count OUT OF SPEC per product
-  const counts = {};
-  records.forEach(r => {
-    if (r.overall_status === 'FAIL') {
-      counts[r.product] = (counts[r.product] || 0) + 1;
+  // Step 1: Count FAIL entries per product
+  var counts = {};
+  data.forEach(function(row) {
+    if (row.overall_status === 'FAIL') {
+      var p = row.product || 'Unknown';
+      counts[p] = (counts[p] || 0) + 1;
     }
   });
 
-  // Sort descending (Pareto: biggest first)
-  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  if (!sorted.length) {
+  // Step 2: Sort descending (biggest defect contributor first)
+  var sorted = Object.entries(counts).sort(function(a, b) { return b[1] - a[1]; });
+
+  if (sorted.length === 0) {
     chartInstances['pareto'] = new Chart(ctx, {
       type: 'bar',
-      data: { labels: ['Tidak ada FAIL 🎉'], datasets: [{ data: [0], backgroundColor: C.greenLight }] },
-      options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
+      data: {
+        labels: ['Semua PASS 🎉'],
+        datasets: [{ data: [0], backgroundColor: 'rgba(46,213,115,0.2)', borderColor: '#2ED573', borderWidth: 2 }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: { y: { display: false }, x: { grid: { display: false } } }
+      }
     });
     return;
   }
 
-  const labels = sorted.map(x => x[0]);
-  const barData = sorted.map(x => x[1]);
-  const total   = barData.reduce((a, b) => a + b, 0);
+  var labels  = sorted.map(function(x) { return x[0]; });
+  var barData = sorted.map(function(x) { return x[1]; });
+  var total   = barData.reduce(function(a, b) { return a + b; }, 0);
 
-  // Cumulative % for Pareto line
-  let cum = 0;
-  const lineData = barData.map(v => { cum += v; return Math.round((cum / total) * 100); });
+  // Step 3: Calculate cumulative % for the Pareto line
+  var cumulative = 0;
+  var lineData = barData.map(function(v) {
+    cumulative += v;
+    return Math.round((cumulative / total) * 100);
+  });
 
+  // Step 4: Draw mixed chart (bar + line on dual axes)
   chartInstances['pareto'] = new Chart(ctx, {
-    type: 'bar',
+    type: 'bar', // base type — the line dataset overrides its own type
     data: {
-      labels,
+      labels: labels,
       datasets: [
         {
-          type: 'bar', label: 'Jumlah FAIL',
-          data: barData, backgroundColor: C.orangeLight, borderColor: C.orange,
-          borderWidth: 2, borderRadius: 6, yAxisID: 'y'
+          // LEFT axis — bar chart showing raw fail count
+          type: 'bar',
+          label: 'Jumlah FAIL',
+          data: barData,
+          backgroundColor: 'rgba(255,107,53,0.18)',
+          borderColor: '#FF6B35',
+          borderWidth: 2,
+          borderRadius: 6,
+          yAxisID: 'yLeft',
+          order: 2  // draw bars behind the line
         },
         {
-          type: 'line', label: 'Kumulatif %',
-          data: lineData, borderColor: C.teal, backgroundColor: 'transparent',
-          borderWidth: 2.5, pointBackgroundColor: C.teal, pointRadius: 4,
-          tension: 0.3, yAxisID: 'y2'
+          // RIGHT axis — line chart showing cumulative %
+          type: 'line',
+          label: 'Kumulatif %',
+          data: lineData,
+          borderColor: '#00B89C',
+          backgroundColor: 'transparent',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#00B89C',
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          tension: 0.3,
+          yAxisID: 'yRight',
+          order: 1  // draw line on top
         }
       ]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: true, position: 'top', labels: { font: { size: 11, weight: '600' }, boxWidth: 12 } },
-        tooltip: { mode: 'index', intersect: false }
+        legend: {
+          display: true,
+          position: 'top',
+          labels: { font: { size: 11, weight: '600' }, boxWidth: 12, padding: 16 }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(item) {
+              if (item.datasetIndex === 0) return 'FAIL: ' + item.raw;
+              return 'Kumulatif: ' + item.raw + '%';
+            }
+          }
+        }
       },
       scales: {
-        x: { grid: { color: C.border }, ticks: { font: { size: 11 } } },
-        y: { grid: { color: C.border }, title: { display: true, text: 'Jumlah FAIL', font: { size: 11, weight: '700' } } },
-        y2: {
-          position: 'right', grid: { display: false },
-          min: 0, max: 100,
-          ticks: { callback: v => v + '%', font: { size: 11 } },
+        x: {
+          grid: { color: '#E8DDD0' },
+          ticks: { font: { size: 11, weight: '600' } }
+        },
+        yLeft: {
+          type: 'linear',
+          position: 'left',
+          beginAtZero: true,
+          grid: { color: '#E8DDD0' },
+          ticks: { stepSize: 1, font: { size: 10 } },
+          title: { display: true, text: 'Jumlah FAIL', font: { size: 11, weight: '700' } }
+        },
+        yRight: {
+          type: 'linear',
+          position: 'right',
+          min: 0,
+          max: 100,
+          grid: { display: false }, // hide right-side gridlines to avoid clutter
+          ticks: {
+            font: { size: 10 },
+            callback: function(v) { return v + '%'; }
+          },
           title: { display: true, text: 'Kumulatif %', font: { size: 11, weight: '700' } }
         }
       }
@@ -1553,124 +1715,182 @@ function drawPareto(records) {
   });
 }
 
-// ── 3. CONTROL CHART (pH or Brix) ────────────────────────────
-function drawControlChart(param, records) {
-  // param = 'ph' or 'brix'
-  const chartId  = param === 'ph' ? 'chartPh'     : 'chartBrix';
-  const loadId   = param === 'ph' ? 'loadPhChart'  : 'loadBrixChart';
-  const statsId  = param === 'ph' ? 'statsPh'      : 'statsBrix';
-  const label    = param === 'ph' ? 'pH'            : 'Brix (°Bx)';
-  const color    = param === 'ph' ? C.teal          : C.orange;
-  const colorLight = param === 'ph' ? C.tealLight   : C.orangeLight;
+// ─────────────────────────────────────────────────────────────
+// 3. CONTROL CHART — Statistical Process Control (SPC)
+//    Works for both 'ph' and 'brix' fields
+//    Plots actual values over time + Mean / UCL / LCL lines
+//    UCL = Mean + 3σ  |  LCL = Mean - 3σ
+//    Points outside limits are highlighted RED automatically
+// ─────────────────────────────────────────────────────────────
+function drawControlChart(field, data) {
+  // Resolve canvas IDs and labels based on which field we're plotting
+  var chartId  = field === 'ph' ? 'chartPh'      : 'chartBrix';
+  var loadId   = field === 'ph' ? 'loadPhChart'   : 'loadBrixChart';
+  var statsId  = field === 'ph' ? 'statsPh'       : 'statsBrix';
+  var axisLabel = field === 'ph' ? 'pH'            : 'Brix (°Bx)';
+  var lineColor = field === 'ph' ? '#00B89C'       : '#FF6B35';
+  var fillColor = field === 'ph' ? 'rgba(0,184,156,0.1)' : 'rgba(255,107,53,0.1)';
 
-  destroyChart(param + 'Control');
+  destroyChart(field + 'Control');
   showCanvas(loadId, chartId);
+
   const ctx = document.getElementById(chartId).getContext('2d');
 
-  // Filter rows that have this parameter and parse values
-  const rows = records
-    .filter(r => r[param] !== '' && r[param] !== null && r[param] !== undefined)
-    .map(r => ({ ts: new Date(r.timestamp), val: parseFloat(r[param]), product: r.product }))
-    .filter(r => !isNaN(r.val))
-    .sort((a, b) => a.ts - b.ts);
+  // Step 1: Extract valid numeric rows for this field, sorted oldest → newest
+  var rows = [];
+  data.forEach(function(row) {
+    var raw = row[field];
+    if (raw === '' || raw === null || raw === undefined) return;
+    var val = parseFloat(raw);
+    if (isNaN(val)) return;
+    rows.push({ ts: new Date(row.timestamp), val: val });
+  });
+  rows.sort(function(a, b) { return a.ts - b.ts; });
 
+  // Need at least 3 points to draw a meaningful control chart
   if (rows.length < 3) {
-    chartInstances[param + 'Control'] = new Chart(ctx, {
+    chartInstances[field + 'Control'] = new Chart(ctx, {
       type: 'line',
-      data: { labels: ['Data tidak cukup (min. 3)'], datasets: [{ data: [null], borderColor: color }] },
-      options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
+      data: {
+        labels: ['Data tidak cukup (min. 3 titik)'],
+        datasets: [{ data: [null], borderColor: lineColor, pointRadius: 0 }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: { y: { display: false }, x: { grid: { display: false } } }
+      }
     });
-    document.getElementById(statsId).innerHTML = '<span class="chip">Data tidak cukup</span>';
+    document.getElementById(statsId).innerHTML =
+      '<span class="chip">Butuh minimal 3 data untuk control chart</span>';
     return;
   }
 
-  // Calculate SPC statistics
-  const values = rows.map(r => r.val);
-  const mean   = calcMean(values);
-  const std    = calcStdDev(values, mean);
-  const UCL    = mean + 3 * std;
-  const LCL    = Math.max(0, mean - 3 * std); // LCL can't be negative for pH/brix
-  const outliers = values.filter(v => v > UCL || v < LCL).length;
+  // Step 2: Calculate SPC statistics
+  var values = rows.map(function(r) { return r.val; });
+  var mean   = calcMean(values);
+  var std    = calcStdDev(values, mean);
+  var UCL    = mean + 3 * std;
+  var LCL    = mean - 3 * std;
+  if (LCL < 0) LCL = 0; // pH and Brix can't go below 0
 
-  // Render stat chips
-  document.getElementById(statsId).innerHTML = `
-    <span class="chip orange">Mean: ${mean.toFixed(3)}</span>
-    <span class="chip">σ: ${std.toFixed(3)}</span>
-    <span class="chip teal">UCL: ${UCL.toFixed(3)}</span>
-    <span class="chip teal">LCL: ${LCL.toFixed(3)}</span>
-    ${outliers > 0 ? `<span class="chip red">⚠ ${outliers} outlier</span>` : '<span class="chip" style="color:#1a7a3a;background:var(--green-light);border-color:var(--green-border)">✓ Stabil</span>'}
-  `;
+  // Count how many points are outside the control limits
+  var outlierCount = values.filter(function(v) { return v > UCL || v < LCL; }).length;
 
-  const xLabels = rows.map(r =>
-    r.ts.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) + ' ' +
-    r.ts.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-  );
+  // Step 3: Render the stat chips below the chart
+  var stableChip = outlierCount > 0
+    ? '<span class="chip red">⚠ ' + outlierCount + ' outlier terdeteksi</span>'
+    : '<span class="chip" style="color:#1a7a3a;background:var(--green-light);border-color:var(--green-border)">✓ Proses stabil</span>';
 
-  chartInstances[param + 'Control'] = new Chart(ctx, {
+  document.getElementById(statsId).innerHTML =
+    '<span class="chip orange">Mean: ' + mean.toFixed(3) + '</span>' +
+    '<span class="chip">σ: ' + std.toFixed(3) + '</span>' +
+    '<span class="chip teal">UCL: ' + UCL.toFixed(3) + '</span>' +
+    '<span class="chip teal">LCL: ' + LCL.toFixed(3) + '</span>' +
+    stableChip;
+
+  // Step 4: Build X-axis labels (date + time strings)
+  var xLabels = rows.map(function(r) {
+    return r.ts.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })
+      + ' '
+      + r.ts.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  });
+
+  // Step 5: Color each point — red if outside limits, normal color if within
+  var pointColors = values.map(function(v) {
+    return (v > UCL || v < LCL) ? '#FF4757' : lineColor;
+  });
+  var pointSizes = values.map(function(v) {
+    return (v > UCL || v < LCL) ? 7 : 4; // make outliers slightly bigger
+  });
+
+  // Step 6: Draw the chart
+  chartInstances[field + 'Control'] = new Chart(ctx, {
     type: 'line',
     data: {
       labels: xLabels,
       datasets: [
-        // Actual measurement line
         {
-          label: label,
+          // The actual measured values
+          label: axisLabel,
           data: values,
-          borderColor: color, backgroundColor: colorLight,
-          borderWidth: 2, pointRadius: 4, pointBackgroundColor: values.map(v =>
-            v > UCL || v < LCL ? C.red : color
-          ),
-          tension: 0.3, fill: false, order: 1
+          borderColor: lineColor,
+          backgroundColor: fillColor,
+          borderWidth: 2,
+          pointBackgroundColor: pointColors,
+          pointBorderColor: pointColors,
+          pointRadius: pointSizes,
+          pointHoverRadius: 8,
+          tension: 0.3,
+          fill: false,
+          order: 1
         },
-        // Mean line
         {
+          // Mean line — dashed, gray
           label: 'Mean (' + mean.toFixed(3) + ')',
           data: Array(rows.length).fill(mean),
-          borderColor: C.text2, borderWidth: 1.5, borderDash: [6, 4],
-          pointRadius: 0, fill: false, order: 2
+          borderColor: '#A89580',
+          borderWidth: 1.5,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          fill: false,
+          order: 2
         },
-        // UCL line
         {
+          // Upper Control Limit — dashed red
           label: 'UCL (' + UCL.toFixed(3) + ')',
           data: Array(rows.length).fill(UCL),
-          borderColor: C.red, borderWidth: 1.5, borderDash: [4, 4],
-          pointRadius: 0, fill: false, order: 3
+          borderColor: '#FF4757',
+          borderWidth: 1.5,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          fill: false,
+          order: 3
         },
-        // LCL line
         {
+          // Lower Control Limit — dashed red
           label: 'LCL (' + LCL.toFixed(3) + ')',
           data: Array(rows.length).fill(LCL),
-          borderColor: C.red, borderWidth: 1.5, borderDash: [4, 4],
-          pointRadius: 0, fill: false, order: 4
+          borderColor: '#FF4757',
+          borderWidth: 1.5,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          fill: false,
+          order: 4
         }
       ]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
+      responsive: true,
+      maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: true, position: 'top', labels: { font: { size: 10, weight: '600' }, boxWidth: 10 } },
+        legend: {
+          display: true,
+          position: 'top',
+          labels: { font: { size: 10, weight: '600' }, boxWidth: 10, padding: 12 }
+        },
         tooltip: {
           callbacks: {
-            afterLabel: (ctx) => {
-              const v = ctx.raw;
-              if (ctx.datasetIndex === 0) {
-                if (v > UCL) return '⚠ Di atas UCL!';
-                if (v < LCL) return '⚠ Di bawah LCL!';
-                return '✓ Dalam kontrol';
-              }
+            afterLabel: function(item) {
+              // Only annotate the actual data line (index 0)
+              if (item.datasetIndex !== 0) return '';
+              var v = item.raw;
+              if (v > UCL) return '⚠️ Di atas UCL!';
+              if (v < LCL) return '⚠️ Di bawah LCL!';
+              return '✓ Dalam batas kontrol';
             }
           }
         }
       },
       scales: {
         x: {
-          grid: { color: C.border },
-          ticks: { maxRotation: 45, maxTicksLimit: 10, font: { size: 9 } }
+          grid: { color: '#E8DDD0' },
+          ticks: { maxRotation: 45, maxTicksLimit: 12, font: { size: 9 } }
         },
         y: {
-          grid: { color: C.border },
-          title: { display: true, text: label, font: { size: 11, weight: '700' } },
-          ticks: { font: { size: 10 } }
+          grid: { color: '#E8DDD0' },
+          ticks: { font: { size: 10 } },
+          title: { display: true, text: axisLabel, font: { size: 11, weight: '700' } }
         }
       }
     }
