@@ -890,31 +890,16 @@ tbody tr.row-fail:hover { background: #FFE8E8; }
 
       </div>
 
-      <div class="analytics-section-title">🎯 Control Charts (SPC)</div>
-      <div class="chart-grid">
+      <div class="analytics-section-title">📉 Out of Spec Trend</div>
 
-        <!-- CONTROL CHART: pH -->
-        <div class="chart-card">
-          <div class="chart-card-title">Control Chart — pH</div>
-          <div class="chart-card-sub">Mean ± 3σ — hanya data Coconut Water</div>
-          <div class="chart-canvas-wrap">
-            <div class="chart-loading" id="loadPhChart"><div class="spinner"></div>Memuat…</div>
-            <canvas id="chartPh" style="display:none;"></canvas>
-          </div>
-          <div class="chart-stats" id="statsPh"></div>
+      <!-- UNIFIED LINE CHART — pH, Brix, TDS out-of-spec count per day -->
+      <div class="chart-card" style="margin-bottom:16px;">
+        <div class="chart-card-title">Out of Spec per Hari — pH, Brix &amp; TDS (ppm)</div>
+        <div class="chart-card-sub">Jumlah nilai OUT OF SPEC per tanggal untuk setiap parameter</div>
+        <div class="chart-canvas-wrap" style="height:300px;">
+          <div class="chart-loading" id="loadTrendChart"><div class="spinner"></div>Memuat…</div>
+          <canvas id="chartTrend" style="display:none;"></canvas>
         </div>
-
-        <!-- CONTROL CHART: Brix -->
-        <div class="chart-card">
-          <div class="chart-card-title">Control Chart — Brix</div>
-          <div class="chart-card-sub">Mean ± 3σ — semua produk dengan data Brix</div>
-          <div class="chart-canvas-wrap">
-            <div class="chart-loading" id="loadBrixChart"><div class="spinner"></div>Memuat…</div>
-            <canvas id="chartBrix" style="display:none;"></canvas>
-          </div>
-          <div class="chart-stats" id="statsBrix"></div>
-        </div>
-
       </div>
 
       <!-- AI ANALYSIS CARD -->
@@ -1392,11 +1377,10 @@ async function triggerAnalytics() {
   // Show the analytics panels section
   document.getElementById('analyticsPanels').classList.add('visible');
 
-  // Draw all 4 charts — each function handles its own canvas by ID
+  // Draw all 3 charts — each function handles its own canvas by ID
   drawHistogram(allRecords);
   drawPareto(allRecords);
-  drawControlChart('ph',   allRecords);
-  drawControlChart('brix', allRecords);
+  drawOutOfSpecTrend(allRecords);
 
   btn.disabled = false;
   btn.textContent = '🔄 Refresh Charts';
@@ -1448,8 +1432,7 @@ function destroyChart(id) {
   var canvasMap = {
     'histogram':  'chartHistogram',
     'pareto':     'chartPareto',
-    'phControl':  'chartPh',
-    'brixControl':'chartBrix'
+    'trend':      'chartTrend'
   };
   var canvasId = canvasMap[id];
   if (canvasId) {
@@ -1733,140 +1716,79 @@ function drawPareto(data) {
 //    UCL = Mean + 3σ  |  LCL = Mean - 3σ
 //    Points outside limits are highlighted RED automatically
 // ─────────────────────────────────────────────────────────────
-function drawControlChart(field, data) {
-  // Resolve canvas IDs and labels based on which field we're plotting
-  var chartId  = field === 'ph' ? 'chartPh'      : 'chartBrix';
-  var loadId   = field === 'ph' ? 'loadPhChart'   : 'loadBrixChart';
-  var statsId  = field === 'ph' ? 'statsPh'       : 'statsBrix';
-  var axisLabel = field === 'ph' ? 'pH'            : 'Brix (°Bx)';
-  var lineColor = field === 'ph' ? '#6EC6E6'       : '#5B7FFF';
-  var fillColor = field === 'ph' ? 'rgba(0,184,156,0.1)' : 'rgba(255,107,53,0.1)';
+function drawOutOfSpecTrend(data) {
+  // Destroy any previous instance and reset the canvas
+  destroyChart('trend');
+  showCanvas('loadTrendChart', 'chartTrend');
 
-  destroyChart(field + 'Control');
-  showCanvas(loadId, chartId);
+  var ctx = document.getElementById('chartTrend').getContext('2d');
 
-  const ctx = document.getElementById(chartId).getContext('2d');
-
-  // Step 1: Extract valid numeric rows for this field, sorted oldest → newest
-  var rows = [];
+  // ── Step 1: Group by date, count OOS per parameter ──
+  var byDate = {};
   data.forEach(function(row) {
-    var raw = row[field];
-    if (raw === '' || raw === null || raw === undefined) return;
-    var val = parseFloat(raw);
-    if (isNaN(val)) return;
-    rows.push({ ts: new Date(row.timestamp), val: val });
+    if (!row.timestamp) return;
+    var ts  = new Date(row.timestamp);
+    var key = ts.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    if (!byDate[key]) byDate[key] = { sortKey: ts, ph: 0, brix: 0, tds: 0 };
+    if (row.ph_status   === 'OUT OF SPEC') byDate[key].ph++;
+    if (row.brix_status === 'OUT OF SPEC') byDate[key].brix++;
+    if (row.tds_status  === 'OUT OF SPEC') byDate[key].tds++;
   });
-  rows.sort(function(a, b) { return a.ts - b.ts; });
 
-  // Need at least 3 points to draw a meaningful control chart
-  if (rows.length < 3) {
-    chartInstances[field + 'Control'] = new Chart(ctx, {
+  // ── Step 2: Sort oldest → newest ──
+  var dates = Object.keys(byDate).sort(function(a, b) {
+    return byDate[a].sortKey - byDate[b].sortKey;
+  });
+
+  if (!dates.length) {
+    chartInstances['trend'] = new Chart(ctx, {
       type: 'line',
-      data: {
-        labels: ['Data tidak cukup (min. 3 titik)'],
-        datasets: [{ data: [null], borderColor: lineColor, pointRadius: 0 }]
-      },
-      options: {
-        plugins: { legend: { display: false } },
-        scales: { y: { display: false }, x: { grid: { display: false } } }
-      }
+      data: { labels: ['Belum ada data'], datasets: [{ data: [null], borderColor: '#5B7FFF', pointRadius: 0 }] },
+      options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
     });
-    document.getElementById(statsId).innerHTML =
-      '<span class="chip">Butuh minimal 3 data untuk control chart</span>';
     return;
   }
 
-  // Step 2: Calculate SPC statistics
-  var values = rows.map(function(r) { return r.val; });
-  var mean   = calcMean(values);
-  var std    = calcStdDev(values, mean);
-  var UCL    = mean + 3 * std;
-  var LCL    = mean - 3 * std;
-  if (LCL < 0) LCL = 0; // pH and Brix can't go below 0
+  // ── Step 3: Build value arrays ──
+  var phCounts   = dates.map(function(d) { return byDate[d].ph;   });
+  var brixCounts = dates.map(function(d) { return byDate[d].brix; });
+  var tdsCounts  = dates.map(function(d) { return byDate[d].tds;  });
 
-  // Count how many points are outside the control limits
-  var outlierCount = values.filter(function(v) { return v > UCL || v < LCL; }).length;
-
-  // Step 3: Render the stat chips below the chart
-  var stableChip = outlierCount > 0
-    ? '<span class="chip red">⚠ ' + outlierCount + ' outlier terdeteksi</span>'
-    : '<span class="chip" style="color:#1a7a3a;background:var(--green-light);border-color:var(--green-border)">✓ Proses stabil</span>';
-
-  document.getElementById(statsId).innerHTML =
-    '<span class="chip orange">Mean: ' + mean.toFixed(3) + '</span>' +
-    '<span class="chip">σ: ' + std.toFixed(3) + '</span>' +
-    '<span class="chip teal">UCL: ' + UCL.toFixed(3) + '</span>' +
-    '<span class="chip teal">LCL: ' + LCL.toFixed(3) + '</span>' +
-    stableChip;
-
-  // Step 4: Build X-axis labels (date + time strings)
-  var xLabels = rows.map(function(r) {
-    return r.ts.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })
-      + ' '
-      + r.ts.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-  });
-
-  // Step 5: Color each point — red if outside limits, normal color if within
-  var pointColors = values.map(function(v) {
-    return (v > UCL || v < LCL) ? '#FF4757' : lineColor;
-  });
-  var pointSizes = values.map(function(v) {
-    return (v > UCL || v < LCL) ? 7 : 4; // make outliers slightly bigger
-  });
-
-  // Step 6: Draw the chart
-  chartInstances[field + 'Control'] = new Chart(ctx, {
+  // ── Step 4: Render chart ──
+  chartInstances['trend'] = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: xLabels,
+      labels: dates,
       datasets: [
         {
-          // The actual measured values
-          label: axisLabel,
-          data: values,
-          borderColor: lineColor,
-          backgroundColor: fillColor,
-          borderWidth: 2,
-          pointBackgroundColor: pointColors,
-          pointBorderColor: pointColors,
-          pointRadius: pointSizes,
-          pointHoverRadius: 8,
-          tension: 0.3,
-          fill: false,
-          order: 1
+          label: 'pH — Out of Spec',
+          data: phCounts,
+          borderColor: '#5B7FFF',
+          backgroundColor: 'rgba(91,127,255,0.08)',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#5B7FFF',
+          pointRadius: 5, pointHoverRadius: 8,
+          tension: 0.35, fill: true
         },
         {
-          // Mean line — dashed, gray
-          label: 'Mean (' + mean.toFixed(3) + ')',
-          data: Array(rows.length).fill(mean),
-          borderColor: '#9099C0',
-          borderWidth: 1.5,
-          borderDash: [6, 4],
-          pointRadius: 0,
-          fill: false,
-          order: 2
+          label: 'Brix — Out of Spec',
+          data: brixCounts,
+          borderColor: '#6EC6E6',
+          backgroundColor: 'rgba(110,198,230,0.08)',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#6EC6E6',
+          pointRadius: 5, pointHoverRadius: 8,
+          tension: 0.35, fill: true
         },
         {
-          // Upper Control Limit — dashed red
-          label: 'UCL (' + UCL.toFixed(3) + ')',
-          data: Array(rows.length).fill(UCL),
-          borderColor: '#FF4757',
-          borderWidth: 1.5,
-          borderDash: [4, 4],
-          pointRadius: 0,
-          fill: false,
-          order: 3
-        },
-        {
-          // Lower Control Limit — dashed red
-          label: 'LCL (' + LCL.toFixed(3) + ')',
-          data: Array(rows.length).fill(LCL),
-          borderColor: '#FF4757',
-          borderWidth: 1.5,
-          borderDash: [4, 4],
-          pointRadius: 0,
-          fill: false,
-          order: 4
+          label: 'TDS (ppm) — Out of Spec',
+          data: tdsCounts,
+          borderColor: '#A78BFA',
+          backgroundColor: 'rgba(167,139,250,0.08)',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#A78BFA',
+          pointRadius: 5, pointHoverRadius: 8,
+          tension: 0.35, fill: true
         }
       ]
     },
@@ -1876,19 +1798,25 @@ function drawControlChart(field, data) {
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
-          display: true,
-          position: 'top',
-          labels: { font: { size: 10, weight: '600' }, boxWidth: 10, padding: 12 }
+          display: true, position: 'top',
+          labels: {
+            font: { size: 11, weight: '600', family: "'Plus Jakarta Sans', sans-serif" },
+            boxWidth: 12, padding: 16, usePointStyle: true, pointStyle: 'circle'
+          }
         },
         tooltip: {
+          backgroundColor: '#FFFFFF',
+          titleColor: '#12143A',
+          bodyColor: '#4A5080',
+          borderColor: '#D8DCF0',
+          borderWidth: 1.5,
+          padding: 12,
           callbacks: {
-            afterLabel: function(item) {
-              // Only annotate the actual data line (index 0)
-              if (item.datasetIndex !== 0) return '';
-              var v = item.raw;
-              if (v > UCL) return '⚠️ Di atas UCL!';
-              if (v < LCL) return '⚠️ Di bawah LCL!';
-              return '✓ Dalam batas kontrol';
+            title: function(items) { return '📅 ' + items[0].label; },
+            label: function(item) {
+              var count = item.raw;
+              var name  = item.dataset.label.split(' — ')[0];
+              return '  ' + name + ': ' + count + (count === 0 ? ' ✓ Semua pass' : ' kali out of spec');
             }
           }
         }
@@ -1896,12 +1824,14 @@ function drawControlChart(field, data) {
       scales: {
         x: {
           grid: { color: '#D8DCF0' },
-          ticks: { maxRotation: 45, maxTicksLimit: 12, font: { size: 9 } }
+          ticks: { maxRotation: 40, maxTicksLimit: 14, font: { size: 10 } },
+          title: { display: true, text: 'Tanggal', font: { size: 11, weight: '700' }, color: '#4A5080' }
         },
         y: {
           grid: { color: '#D8DCF0' },
-          ticks: { font: { size: 10 } },
-          title: { display: true, text: axisLabel, font: { size: 11, weight: '700' } }
+          beginAtZero: true,
+          ticks: { stepSize: 1, precision: 0, font: { size: 10 } },
+          title: { display: true, text: 'Jumlah Out of Spec', font: { size: 11, weight: '700' }, color: '#4A5080' }
         }
       }
     }
