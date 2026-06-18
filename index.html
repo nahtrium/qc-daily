@@ -531,6 +531,101 @@ tbody tr.row-fail:hover { background: #FFE8E8; }
   font-weight: 600; gap: 10px;
 }
 
+
+/* ══ MENU PICKER PAGE ══ */
+.menu-wrap {
+  min-height: 100vh; display: flex; align-items: center;
+  justify-content: center; padding: 24px 16px; position: relative; z-index: 1;
+}
+.menu-card {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg); padding: 36px 32px;
+  width: 100%; max-width: 460px; box-shadow: var(--shadow-md);
+}
+.menu-greeting {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+}
+.menu-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--orange), #7B9FFF); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 800; flex-shrink: 0;
+}
+.menu-hello { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; }
+.menu-sub { font-size: 13px; color: var(--text2); font-weight: 500; margin-bottom: 28px; }
+.menu-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+.menu-option {
+  background: var(--bg2); border: 2px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px 16px;
+  cursor: pointer; transition: all 0.18s; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  position: relative;
+}
+.menu-option:hover:not(.menu-disabled) {
+  border-color: var(--orange); background: var(--orange-light);
+  transform: translateY(-2px); box-shadow: var(--shadow-md);
+}
+.menu-option:active:not(.menu-disabled) { transform: translateY(0); }
+.menu-disabled {
+  opacity: 0.45; cursor: not-allowed;
+}
+.menu-option-icon { font-size: 28px; line-height: 1; }
+.menu-option-label {
+  font-size: 13px; font-weight: 800; color: var(--text); letter-spacing: -0.2px;
+}
+.menu-option-desc { font-size: 11px; color: var(--text3); font-weight: 500; }
+.menu-coming-soon {
+  position: absolute; top: 8px; right: 8px;
+  background: var(--bg2); border: 1.5px solid var(--border);
+  color: var(--text3); font-size: 9px; font-weight: 700;
+  padding: 2px 7px; border-radius: var(--radius-pill);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.menu-back-btn {
+  background: none; border: none; color: var(--text3);
+  font-family: var(--font); font-size: 13px; font-weight: 600;
+  cursor: pointer; padding: 0; margin-top: 20px;
+  display: flex; align-items: center; gap: 5px; transition: color 0.15s;
+}
+.menu-back-btn:hover { color: var(--text2); }
+
+/* ══ ROOM TEMP FORM ══ */
+.rt-status-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: var(--radius-pill);
+  font-size: 12px; font-weight: 700; margin-top: 6px;
+}
+.rt-normal  { background: var(--green-light); color: #1a6b40; border: 1.5px solid var(--green-border); }
+.rt-warning { background: #FFFBEE; color: #8a6000; border: 1.5px solid #FFE58F; }
+.rt-alert   { background: var(--red-light); color: #9b1a28; border: 1.5px solid var(--red-border); }
+
+/* ══ ROOM TEMP DASHBOARD ══ */
+.dash-tab-row {
+  display: flex; gap: 6px; margin-bottom: 20px;
+  background: var(--bg2); border: 1.5px solid var(--border);
+  padding: 4px; border-radius: var(--radius-pill); width: fit-content;
+}
+.dash-tab-btn {
+  background: none; border: none; color: var(--text2);
+  padding: 7px 20px; border-radius: var(--radius-pill);
+  font-family: var(--font); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.18s;
+}
+.dash-tab-btn.active {
+  background: var(--surface); color: var(--orange);
+  box-shadow: var(--shadow);
+}
+.rt-table-wrap {
+  overflow-x: auto; background: var(--surface);
+  border: 1.5px solid var(--border); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+.rt-badge-normal  { background: var(--green-light); color: #1a6b40; border: 1.5px solid var(--green-border); }
+.rt-badge-warning { background: #FFFBEE; color: #8a6000; border: 1.5px solid #FFE58F; }
+.rt-badge-alert   { background: var(--red-light); color: #9b1a28; border: 1.5px solid var(--red-border); }
+
 </style>
 </head>
 <body>
@@ -562,19 +657,146 @@ tbody tr.row-fail:hover { background: #FFE8E8; }
   </div>
 </div>
 
+<!-- ═══ MENU PICKER ═══ -->
+<div id="menuView" class="view">
+  <div class="menu-wrap">
+    <div class="menu-card">
+      <div class="menu-greeting">
+        <div class="menu-avatar" id="menuAvatar">A</div>
+        <div class="menu-hello">Halo, <span id="menuName">—</span>! 👋</div>
+      </div>
+      <div class="menu-sub">Pilih jenis pengecekan yang ingin kamu lakukan.</div>
+
+      <div class="menu-grid">
+        <!-- In Process -->
+        <div class="menu-option" onclick="pickMenu('inprocess')">
+          <div class="menu-option-icon">🧪</div>
+          <div class="menu-option-label">In Process</div>
+          <div class="menu-option-desc">QC produksi harian</div>
+        </div>
+
+        <!-- Room Temp -->
+        <div class="menu-option" onclick="pickMenu('roomtemp')">
+          <div class="menu-option-icon">🌡️</div>
+          <div class="menu-option-label">Room Temp</div>
+          <div class="menu-option-desc">Suhu & kelembaban ruangan</div>
+        </div>
+
+        <!-- Outbound — coming soon -->
+        <div class="menu-option menu-disabled">
+          <span class="menu-coming-soon">Segera</span>
+          <div class="menu-option-icon">📦</div>
+          <div class="menu-option-label">Outbound</div>
+          <div class="menu-option-desc">Pengecekan pengiriman</div>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="menu-option" onclick="pickMenu('dashboard')">
+          <div class="menu-option-icon">📊</div>
+          <div class="menu-option-label">Dashboard</div>
+          <div class="menu-option-desc">Lihat data & grafik</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ROOM TEMP FORM VIEW ═══ -->
+<div id="roomTempView" class="view">
+  <div class="form-wrap">
+
+    <div class="section-card">
+      <div class="section-hd">
+        <div class="section-num">1</div>
+        <div class="section-title">Informasi Ruangan</div>
+      </div>
+      <div class="form-row">
+        <div class="field-label">Ruangan (Room)</div>
+        <select class="form-input" id="rt_room">
+          <option value="">— Pilih ruangan —</option>
+          <option>IC</option>
+          <option>Grouper</option>
+          <option>Kopi</option>
+          <option>Kitchen</option>
+          <option>Pack Basah</option>
+          <option>Pack Kering</option>
+        </select>
+      </div>
+      <div class="auto-row">
+        <div class="form-row">
+          <div class="field-label">Tanggal</div>
+          <div class="auto-val" id="rt_date">—</div>
+        </div>
+        <div class="form-row">
+          <div class="field-label">Waktu</div>
+          <div class="auto-val" id="rt_time">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-hd">
+        <div class="section-num">2</div>
+        <div class="section-title">Pengukuran</div>
+      </div>
+
+      <!-- Room Temperature -->
+      <div class="form-row">
+        <div class="field-label">
+          Suhu Ruangan (°C)
+          <span class="spec-tag" style="background:#EAF7FC;border-color:#B3E4F5;color:#2E7FAB;">≤29 Normal · ≤31 Warning · >31 Alert</span>
+        </div>
+        <input class="form-input" id="rt_temp" type="number" step="0.1" min="0" max="60"
+               placeholder="Masukkan suhu °C" oninput="rtCheckTemp()">
+        <div id="rt_temp_status"></div>
+      </div>
+
+      <!-- Room Humidity -->
+      <div class="form-row">
+        <div class="field-label">
+          Kelembaban Ruangan (%)
+          <span class="spec-tag" style="background:#EAF7FC;border-color:#B3E4F5;color:#2E7FAB;"><55 Normal · ≤60 Warning · >60 Alert</span>
+        </div>
+        <input class="form-input" id="rt_humidity" type="number" step="0.1" min="0" max="100"
+               placeholder="Masukkan kelembaban %" oninput="rtCheckHumidity()">
+        <div id="rt_humidity_status"></div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-hd">
+        <div class="section-num">3</div>
+        <div class="section-title">Catatan</div>
+      </div>
+      <div class="form-row">
+        <textarea class="form-input" id="rt_notes" rows="3" placeholder="Catatan opsional…" style="resize:vertical;"></textarea>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="submit-bar">
+    <button class="submit-btn" id="rtSubmitBtn" onclick="submitRoomTemp()">Kirim Data Room Temp ✓</button>
+  </div>
+</div>
+
 <!-- ═══ NAV ═══ -->
 <nav class="nav" id="mainNav" style="display:none;">
   <div class="nav-brand">
     <span class="nav-brand-dot"></span>
     QC<span>Astro</span>
   </div>
-  <div class="nav-tabs">
+  <div class="nav-tabs" id="navTabs">
     <button class="nav-tab active" id="tabForm" onclick="switchTab('form')">✏️ Entry</button>
     <button class="nav-tab" id="tabDash" onclick="switchTab('dash')">📊 Dashboard</button>
   </div>
-  <div class="nav-user">
-    <div class="nav-avatar" id="navAvatar">A</div>
-    <span class="nav-user-name" id="navUser">—</span>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button class="menu-back-btn" onclick="goToMenu()" style="margin-top:0;padding:6px 10px;background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--radius-pill);font-size:11px;font-weight:700;color:var(--text2);">← Menu</button>
+    <div class="nav-user">
+      <div class="nav-avatar" id="navAvatar">A</div>
+      <span class="nav-user-name" id="navUser">—</span>
+    </div>
   </div>
 </nav>
 
@@ -750,6 +972,14 @@ tbody tr.row-fail:hover { background: #FFE8E8; }
 <!-- ═══ DASHBOARD VIEW ═══ -->
 <div id="dashView" class="view">
   <div class="dash-wrap">
+    <!-- Dashboard sub-tabs -->
+    <div class="dash-tab-row">
+      <button class="dash-tab-btn active" id="dashTabInprocess" onclick="switchDashTab('inprocess')">🧪 In Process</button>
+      <button class="dash-tab-btn" id="dashTabRoomtemp" onclick="switchDashTab('roomtemp')">🌡️ Room Temp</button>
+    </div>
+
+    <!-- ══ IN PROCESS PANEL ══ -->
+    <div id="dashInprocess">
     <div class="dash-hd">
       <div>
         <div class="dash-title">QC Log Dashboard 📋</div>
@@ -852,6 +1082,79 @@ tbody tr.row-fail:hover { background: #FFE8E8; }
         </tbody>
       </table>
     </div>
+
+    </div><!-- /dashInprocess -->
+
+    <!-- ══ ROOM TEMP DASHBOARD PANEL ══ -->
+    <div id="dashRoomtemp" style="display:none;">
+      <div class="dash-hd">
+        <div>
+          <div class="dash-title">Room Temp Dashboard 🌡️</div>
+          <div class="dash-sub" id="rtDashSub">Memuat data…</div>
+        </div>
+        <button class="refresh-btn" onclick="loadRoomTempDashboard()">↺ Refresh</button>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">Total Log</div><div class="stat-val clr-orange" id="rtStatTotal">—</div></div>
+        <div class="stat-card"><div class="stat-label">Normal 🟢</div><div class="stat-val clr-pass" id="rtStatNormal">—</div></div>
+        <div class="stat-card"><div class="stat-label">Warning 🟡</div><div class="stat-val" style="color:#8a6000;" id="rtStatWarning">—</div></div>
+        <div class="stat-card"><div class="stat-label">Alert 🔴</div><div class="stat-val clr-fail" id="rtStatAlert">—</div></div>
+      </div>
+
+      <div class="filters">
+        <div class="filter-group">
+          <div class="filter-label">Ruangan</div>
+          <select class="filter-input" id="rtFltRoom">
+            <option value="">Semua ruangan</option>
+            <option>IC</option><option>Grouper</option><option>Kopi</option>
+            <option>Kitchen</option><option>Pack Basah</option><option>Pack Kering</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">Tanggal</div>
+          <input class="filter-input" id="rtFltDate" type="date">
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">Status Suhu</div>
+          <select class="filter-input" id="rtFltStatus">
+            <option value="">Semua</option>
+            <option value="Normal">Normal</option>
+            <option value="Warning">Warning</option>
+            <option value="Alert">Alert</option>
+          </select>
+        </div>
+        <div class="filter-actions">
+          <button class="filter-btn primary" onclick="applyRtFilters()">Filter</button>
+          <button class="filter-btn" onclick="clearRtFilters()">Clear</button>
+        </div>
+      </div>
+
+      <div class="rt-table-wrap">
+        <table id="rtLogTable">
+          <thead>
+            <tr>
+              <th onclick="sortRtTable('timestamp')">Waktu ↕</th>
+              <th onclick="sortRtTable('user')">User ↕</th>
+              <th onclick="sortRtTable('room')">Ruangan ↕</th>
+              <th>Suhu (°C)</th>
+              <th>Status Suhu</th>
+              <th>Kelembaban (%)</th>
+              <th>Status Kelembaban</th>
+              <th>Catatan</th>
+            </tr>
+          </thead>
+          <tbody id="rtLogBody">
+            <tr><td colspan="8">
+              <div class="empty-state">
+                <div class="empty-icon">🌡️</div>
+                <div class="empty-text">Belum ada data Room Temp.</div>
+              </div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div><!-- /dashRoomtemp -->
 
     <!-- ═══ ANALYTICS TRIGGER ═══ -->
     <div class="analytics-trigger" id="analyticsTrigger">
@@ -1042,14 +1345,83 @@ function login() {
   const sel = document.getElementById('userSelect');
   if (!sel.value) { showToast('Pilih namamu dulu ya! 😊', 'error'); return; }
   currentUser = sel.value;
+  // Go to menu picker, not directly to form
   document.getElementById('loginView').classList.remove('active');
-  document.getElementById('mainNav').style.display = 'flex';
-  document.getElementById('formView').classList.add('active');
-  document.getElementById('navUser').textContent = currentUser.split(' ')[0];
-  document.getElementById('navAvatar').textContent = currentUser.charAt(0).toUpperCase();
+  document.getElementById('menuView').classList.add('active');
+  // Set menu greeting
+  document.getElementById('menuName').textContent = currentUser.split(' ')[0];
+  document.getElementById('menuAvatar').textContent = currentUser.charAt(0).toUpperCase();
+  // Start date/time clock
   updateDateTime();
   setInterval(updateDateTime, 10000);
-  onProductChange();
+}
+
+// Called when user picks a menu option
+function pickMenu(type) {
+  // Hide menu
+  document.getElementById('menuView').classList.remove('active');
+  // Show nav
+  document.getElementById('mainNav').style.display = 'flex';
+  document.getElementById('navUser').textContent = currentUser.split(' ')[0];
+  document.getElementById('navAvatar').textContent = currentUser.charAt(0).toUpperCase();
+
+  if (type === 'inprocess') {
+    // Show In Process form, nav tabs for form/dash
+    document.getElementById('navTabs').innerHTML = `
+      <button class="nav-tab active" id="tabForm" onclick="switchTab('form')">✏️ Entry</button>
+      <button class="nav-tab" id="tabDash" onclick="switchTab('dash')">📊 Dashboard</button>`;
+    document.getElementById('formView').classList.add('active');
+    onProductChange();
+  } else if (type === 'roomtemp') {
+    // Show Room Temp form
+    document.getElementById('navTabs').innerHTML = `
+      <button class="nav-tab active" id="tabRtForm" onclick="switchRtTab('form')">✏️ Entry</button>
+      <button class="nav-tab" id="tabRtDash" onclick="switchRtTab('dash')">📊 Dashboard</button>`;
+    document.getElementById('roomTempView').classList.add('active');
+    // Update room temp date/time
+    const now = new Date();
+    document.getElementById('rt_date').textContent = now.toLocaleDateString('id-ID', {day:'2-digit',month:'short',year:'numeric'});
+    document.getElementById('rt_time').textContent = now.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'});
+  } else if (type === 'dashboard') {
+    // Go straight to dashboard, show both sub-tabs
+    document.getElementById('navTabs').innerHTML = `
+      <button class="nav-tab active" id="tabDashOnly" onclick="switchDashTab('inprocess')">📊 Dashboard</button>`;
+    document.getElementById('dashView').classList.add('active');
+    switchDashTab('inprocess');
+    loadDashboard();
+  }
+}
+
+// Go back to menu picker
+function goToMenu() {
+  // Hide all views
+  ['formView','roomTempView','dashView'].forEach(id => {
+    document.getElementById(id).classList.remove('active');
+  });
+  document.getElementById('mainNav').style.display = 'none';
+  document.getElementById('menuView').classList.add('active');
+}
+
+// Switch between Room Temp entry and dashboard
+function switchRtTab(tab) {
+  document.getElementById('tabRtForm').classList.toggle('active', tab === 'form');
+  document.getElementById('tabRtDash').classList.toggle('active', tab === 'dash');
+  document.getElementById('roomTempView').classList.toggle('active', tab === 'form');
+  document.getElementById('dashView').classList.toggle('active', tab === 'dash');
+  if (tab === 'dash') {
+    switchDashTab('roomtemp');
+    loadRoomTempDashboard();
+  }
+}
+
+// Switch between In Process and Room Temp dashboard panels
+function switchDashTab(tab) {
+  document.getElementById('dashTabInprocess').classList.toggle('active', tab === 'inprocess');
+  document.getElementById('dashTabRoomtemp').classList.toggle('active', tab === 'roomtemp');
+  document.getElementById('dashInprocess').style.display = tab === 'inprocess' ? 'block' : 'none';
+  document.getElementById('dashRoomtemp').style.display = tab === 'roomtemp' ? 'block' : 'none';
+  if (tab === 'inprocess') loadDashboard();
+  if (tab === 'roomtemp')  loadRoomTempDashboard();
 }
 
 // ══ DATE/TIME ══
@@ -1062,10 +1434,11 @@ function updateDateTime() {
 // ══ TABS ══
 function switchTab(tab) {
   ['form','dash'].forEach(t => {
-    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active', t===tab);
+    const el = document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1));
+    if (el) el.classList.toggle('active', t===tab);
     document.getElementById(t+'View').classList.toggle('active', t===tab);
   });
-  if (tab==='dash') loadDashboard();
+  if (tab==='dash') { switchDashTab('inprocess'); loadDashboard(); }
 }
 
 // ══ PRODUCT CHANGE — show/hide fields & update spec tags ══
@@ -1976,6 +2349,215 @@ function formatAiResponse(text) {
     .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')  // wrap bullets in ul
     .replace(/\n{2,}/g, '<br>')  // double newlines to br
     .replace(/\n/g, ' ');  // single newlines
+}
+
+
+// ════════════════════════════════════════════════════════════
+//  ROOM TEMP — Form logic & Supabase integration
+// ════════════════════════════════════════════════════════════
+
+const RT_TABLE = "room_temp_log";
+
+// ── Status logic ──────────────────────────────────────────────
+function rtTempStatus(val) {
+  if (val === '' || isNaN(parseFloat(val))) return null;
+  const v = parseFloat(val);
+  if (v <= 29) return 'Normal';
+  if (v <= 31) return 'Warning';
+  return 'Alert';
+}
+function rtHumidityStatus(val) {
+  if (val === '' || isNaN(parseFloat(val))) return null;
+  const v = parseFloat(val);
+  if (v < 55)  return 'Normal';
+  if (v <= 60) return 'Warning';
+  return 'Alert';
+}
+function rtStatusClass(status) {
+  if (status === 'Normal')  return 'rt-normal';
+  if (status === 'Warning') return 'rt-warning';
+  if (status === 'Alert')   return 'rt-alert';
+  return '';
+}
+function rtStatusEmoji(status) {
+  if (status === 'Normal')  return '🟢';
+  if (status === 'Warning') return '🟡';
+  if (status === 'Alert')   return '🔴';
+  return '';
+}
+
+// ── Real-time status display ──────────────────────────────────
+function rtCheckTemp() {
+  const input = document.getElementById('rt_temp');
+  const statusEl = document.getElementById('rt_temp_status');
+  const status = rtTempStatus(input.value);
+  if (!status) { statusEl.innerHTML = ''; return; }
+  statusEl.innerHTML = `<span class="rt-status-pill ${rtStatusClass(status)}">${rtStatusEmoji(status)} ${status}</span>`;
+}
+function rtCheckHumidity() {
+  const input = document.getElementById('rt_humidity');
+  const statusEl = document.getElementById('rt_humidity_status');
+  const status = rtHumidityStatus(input.value);
+  if (!status) { statusEl.innerHTML = ''; return; }
+  statusEl.innerHTML = `<span class="rt-status-pill ${rtStatusClass(status)}">${rtStatusEmoji(status)} ${status}</span>`;
+}
+
+// ── Submit to Supabase ────────────────────────────────────────
+async function submitRoomTemp() {
+  const room = document.getElementById('rt_room').value;
+  if (!room) { showToast('Pilih ruangan dulu ya! 🏠', 'error'); return; }
+
+  const temp     = document.getElementById('rt_temp').value;
+  const humidity = document.getElementById('rt_humidity').value;
+  const tempSt   = rtTempStatus(temp)     || 'N/A';
+  const humSt    = rtHumidityStatus(humidity) || 'N/A';
+
+  const now = new Date();
+  const payload = {
+    timestamp:        now.toISOString(),
+    user:             currentUser,
+    room:             room,
+    date:             now.toLocaleDateString('id-ID'),
+    time:             now.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'}),
+    room_temp:        temp,
+    temp_status:      tempSt,
+    room_humidity:    humidity,
+    humidity_status:  humSt,
+    notes:            document.getElementById('rt_notes').value
+  };
+
+  const btn = document.getElementById('rtSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Mengirim…';
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${RT_TABLE}`, {
+      method: 'POST',
+      headers: SUPA_HEADERS,
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      let msg = res.status;
+      try { const b = await res.json(); msg = b.message || b.hint || msg; } catch(_) {}
+      throw new Error(msg);
+    }
+    showToast('Data Room Temp tersimpan! ✅', 'success');
+    // Reset form
+    document.getElementById('rt_room').value = '';
+    document.getElementById('rt_temp').value = '';
+    document.getElementById('rt_humidity').value = '';
+    document.getElementById('rt_notes').value = '';
+    document.getElementById('rt_temp_status').innerHTML = '';
+    document.getElementById('rt_humidity_status').innerHTML = '';
+  } catch(e) {
+    console.error('RT submit error:', e);
+    showToast('Gagal simpan: ' + e.message, 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Kirim Data Room Temp ✓';
+}
+
+// ── Dashboard: Load & Render ──────────────────────────────────
+let allRtRecords = [];
+let rtSortKey = 'timestamp';
+let rtSortDir = -1;
+
+async function loadRoomTempDashboard() {
+  document.getElementById('rtDashSub').textContent = 'Memuat data…';
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/${RT_TABLE}?select=*&order=timestamp.desc&limit=500`,
+      { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } }
+    );
+    if (!res.ok) {
+      let msg = res.status;
+      try { const b = await res.json(); msg = b.message || b.hint || msg; } catch(_) {}
+      throw new Error(msg);
+    }
+    allRtRecords = await res.json();
+    renderRtTable(allRtRecords);
+    document.getElementById('rtDashSub').textContent =
+      `${allRtRecords.length} total entri · diperbarui ${new Date().toLocaleTimeString('id-ID')}`;
+  } catch(e) {
+    console.error('RT load error:', e);
+    document.getElementById('rtDashSub').textContent = 'Gagal memuat: ' + e.message;
+    showToast('Gagal memuat Room Temp: ' + e.message, 'error');
+  }
+}
+
+function applyRtFilters() {
+  const room   = document.getElementById('rtFltRoom').value;
+  const date   = document.getElementById('rtFltDate').value;
+  const status = document.getElementById('rtFltStatus').value;
+  const filtered = allRtRecords.filter(r => {
+    if (room   && r.room !== room) return false;
+    if (date   && !r.timestamp.startsWith(date)) return false;
+    if (status && r.temp_status !== status && r.humidity_status !== status) return false;
+    return true;
+  });
+  renderRtTable(filtered);
+}
+
+function clearRtFilters() {
+  document.getElementById('rtFltRoom').value = '';
+  document.getElementById('rtFltDate').value = '';
+  document.getElementById('rtFltStatus').value = '';
+  renderRtTable(allRtRecords);
+}
+
+function sortRtTable(key) {
+  rtSortDir = rtSortKey === key ? rtSortDir * -1 : -1;
+  rtSortKey = key;
+  allRtRecords.sort((a, b) => {
+    const av = a[key] || '', bv = b[key] || '';
+    return av < bv ? rtSortDir : av > bv ? -rtSortDir : 0;
+  });
+  renderRtTable(allRtRecords);
+}
+
+function renderRtTable(records) {
+  const total   = records.length;
+  const normal  = records.filter(r => r.temp_status === 'Normal'  && r.humidity_status === 'Normal').length;
+  const alerts  = records.filter(r => r.temp_status === 'Alert'   || r.humidity_status === 'Alert').length;
+  const warnings = records.filter(r =>
+    (r.temp_status === 'Warning' || r.humidity_status === 'Warning') &&
+    r.temp_status !== 'Alert' && r.humidity_status !== 'Alert'
+  ).length;
+
+  document.getElementById('rtStatTotal').textContent   = total;
+  document.getElementById('rtStatNormal').textContent  = normal;
+  document.getElementById('rtStatWarning').textContent = warnings;
+  document.getElementById('rtStatAlert').textContent   = alerts;
+
+  const tbody = document.getElementById('rtLogBody');
+  if (!records.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🌡️</div><div class="empty-text">Tidak ada data yang sesuai filter.</div></div></td></tr>`;
+    return;
+  }
+
+  const rtBadge = status => {
+    const cls = status === 'Normal' ? 'rt-badge-normal' : status === 'Warning' ? 'rt-badge-warning' : status === 'Alert' ? 'rt-badge-alert' : '';
+    const emoji = rtStatusEmoji(status);
+    return `<span class="badge ${cls}">${emoji} ${status || '—'}</span>`;
+  };
+
+  tbody.innerHTML = records.map(r => {
+    const ts = r.timestamp
+      ? new Date(r.timestamp).toLocaleString('id-ID', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})
+      : '—';
+    const rowClass = r.temp_status === 'Alert' || r.humidity_status === 'Alert' ? 'row-fail' : '';
+    return `<tr class="${rowClass}">
+      <td style="font-size:12px;color:var(--text2);font-weight:500;">${ts}</td>
+      <td style="font-weight:600;">${r.user || '—'}</td>
+      <td style="font-weight:600;">🏠 ${r.room || '—'}</td>
+      <td style="font-weight:600;font-family:monospace;">${r.room_temp || '—'}°C</td>
+      <td>${rtBadge(r.temp_status)}</td>
+      <td style="font-weight:600;font-family:monospace;">${r.room_humidity || '—'}%</td>
+      <td>${rtBadge(r.humidity_status)}</td>
+      <td style="font-size:12px;max-width:160px;white-space:normal;color:var(--text2);">${r.notes || ''}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ══ TOAST ══
